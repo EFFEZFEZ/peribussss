@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mon Réseau - Bus en Temps Réel</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.js" charset="utf-8"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header id="main-header">
+    <div class="header-content">
+        <div class="logo">
+            <img src="https://i.ibb.co/SDSBZPyf/peribus-01-480x250-removebg-preview.png" alt="Logo Péribus" class="header-logo-img">
+            <div class="header-title-group">
+                <span class="brand-name">Péribus</span>
+                <span class="brand-sub">Le réseau du Grand Périgueux</span>
+            </div>
+        </div>
+        <nav class="header-nav">
+            </nav>
+    </div>
+</header>
+
+    <div id="alert-banner" class="hidden">
+        <div id="alert-banner-content"></div>
+        <button id="alert-banner-close">&times;</button>
+    </div>
+
+    <div id="dashboard-container">
+        <main id="dashboard-main">
+
+            <div id="dashboard-hall" class="view-is-active">
+                
+                <div class="hero-section">
+                    
+                    <div class="planner-block-wrapper">
+                        <div class="planner-block">
+                            <div class="planner-title-bar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                <h3>Où allons-nous ?</h3>
+                            </div>
+                            
+                            <div class="planner-form">
+                                <div class="planner-inputs">
+                                    
+                                    <div class="form-group" style="position: relative;">
+                                        <label for="hall-planner-from">DÉPART (obligatoire)</label>
+                                        <input type="text" id="hall-planner-from" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                        <div id="from-suggestions" class="autocomplete-suggestions"></div>
+                                        
+                                        <button class="btn-icon-round btn-geolocate" id="hall-geolocate-btn" aria-label="Utiliser ma position" disabled>
+                                            </button>
+                                    </div>
+
+                                    <button class="btn-swap-direction" id="hall-btn-swap-direction" aria-label="Inverser le départ et l'arrivée">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.6v-2.6c0-1.1.9-2 2-2h16"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.4v2.6c0 1.1-.9 2-2 2H3"/></svg>
+                                    </button>
+
+                                    <div class="form-group" style="position: relative;">
+                                        <label for="hall-planner-to">ARRIVÉE (obligatoire)</label>
+                                        <input type="text" id="hall-planner-to" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                        <div id="to-suggestions" class="autocomplete-suggestions"></div>
+                                    </div>
+
+                                </div>
+
+                                <div class="form-group-when">
+                                    <label for="planner-when-btn">QUAND</label>
+                                    <button id="planner-when-btn" class="btn-when">
+                                        <span>Partir maintenant</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                    </button>
+                                    
+                                    <div id="planner-options-popover" class="hidden">
+                                        <div class="popover-tabs">
+                                            <button class="popover-tab active" data-tab="partir">Partir</button>
+                                            <button class="popover-tab" data-tab="arriver">Arriver</button>
+                                        </div>
+                                        
+                                        <div class="popover-content">
+                                            <div class="form-group">
+                                                <label for="popover-date">DATE DU TRAJET</label>
+                                                <select id="popover-date" class="real-select"></select>
+                                            </div>
+                                            <div class="popover-time-inputs">
+                                                <div class="form-group">
+                                                    <label for="popover-hour">HEURE</label>
+                                                    <select id="popover-hour" class="real-select"></select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="popover-minute">MINUTES</label>
+                                                    <select id="popover-minute" class="real-select"></select>
+                                                </div>
+                                            </div>
+                                            <button id="popover-submit-btn" class="btn btn-primary btn-popover-submit">Partir maintenant</button>
+                                        </div>
+                                        </div>
+                                </div>
+                                
+                                <button id="planner-submit-btn" class="btn btn-primary planner-search-btn">Rechercher</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="main-nav-buttons-condensed">
+                        <button class="nav-button-condensed" data-view="horaires">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            <span>Horaires & Lignes</span>
+                        </button>
+                        <button class="nav-button-condensed" data-view="info-trafic">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <span>État du Réseau</span>
+                            <span id="info-trafic-count" class="notification-badge hidden">0</span>
+                        </button>
+                        <button id="btn-show-map" class="nav-button-condensed">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                            <span>Carte Interactive</span>
+                        </button>
+                    </div>
+
+                </div>
+                
+                <div class="bottom-content-wrapper">
+                    <div class="bottom-grid">
+                        
+                        <div class="card key-figures-card">
+                            <h4>Notre réseau en chiffres</h4>
+                            <p>Un service de transport adapté à vos besoins quotidiens.</p>
+                            <div class="key-figures-grid">
+                                <div class="key-figure-item">
+                                    <span class="key-figure-number">36</span>
+                                    <span class="key-figure-label">Lignes</span>
+                                </div>
+                                <div class="key-figure-item">
+                                    <span class="key-figure-number">222</span>
+                                    <span class="key-figure-label">Kilomètres de lignes</span>
+                                </div>
+                                <div class="key-figure-item">
+                                    <span class="key-figure-number">2.1M</span>
+                                    <span class="key-figure-label">Voyageurs / an</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4>Découvrez le réseau</h4>
+                            <p>Consultez le plan complet de toutes les lignes, arrêts et correspondances pour préparer votre voyage.</p>
+                            <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block-link">
+                                Télécharger le plan
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13m-7-7l7 7 7-7"/></svg>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div> 
+            
+            <div id="dashboard-content-view">
+                <button id="btn-back-to-hall" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    <span>Retour au menu</span>
+                </button>
+
+                <div class="content-cards">
+                    
+                    <div id="horaires" class="card"> <h3>Horaires</h3>
+                        <div class="search-container" id="horaires-search-container">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="horaires-search-bar" placeholder="Rechercher un arrêt...">
+                            <div id="horaires-search-results" class="hidden"></div>
+                        </div>
+                        
+                        <h4 class="fiche-horaire-title">Consulter les fiches horaires</h4>
+                        <div id="fiche-horaire-container">
+                            </div>
+                        
+                        <div id="horaires-search-shortcut">
+                            <p>Vous ne trouvez pas votre ligne ?</p>
+                            <button id="btn-horaires-search-focus" class="btn btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Rechercher un arrêt
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="info-trafic" class="card"> <h3>Infos Trafic</h3>
+                        <div class="tabs">
+                            <button class="tab active" data-tab="en-cours">en cours</button>
+                            <button class="tab" data-tab="a-venir">à venir</button>
+                        </div>
+                        <div id="info-trafic-list" class="tab-content active" data-content="en-cours">
+                            </div>
+                        <div id="info-trafic-avenir" class="tab-content hidden" data-content="a-venir">
+                            <p class="card-note">Aucune perturbation à venir signalée.</p>
+                        </div>
+                    </div>
+
+                </div> 
+            </div> 
+        </main>
+    </div>
+    
+    <div id="map-container" class="hidden">
+        
+        <div id="map-view"> 
+            <div id="top-bar">
+                <button id="btn-back-to-dashboard-from-map" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    Retour
+                </button>
+
+                <button id="btn-toggle-filter" class="btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                    <span>Filtrer</span>
+                </button>
+                
+                <div id="clock">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span id="current-time">--:--:--</span>
+                    <span id="date-indicator">--</span>
+                </div>
+
+                <div id="status-info">
+                    <span id="bus-count">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                        0 bus
+                    </span>
+                    <span id="data-status">En attente...</span>
+                </div>
+            </div>
+
+            <div id="mode-banner" class="hidden"></div>
+            <div id="map"></div>
+        </div> 
+        
+        <div id="route-filter-panel" class="hidden">
+            <div class="panel-handle"></div>
+            <div class="filter-header">
+                <h3>Filtrer les lignes</h3>
+                <button id="close-filter" class="btn-close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="filter-actions">
+                <button id="select-all-routes" class="btn-small">Toutes</button>
+                <button id="deselect-all-routes" class="btn-small">Aucune</button>
+            </div>
+            <div id="route-checkboxes" class="route-list"></div>
+        </div>
+
+        <div id="instructions" class="hidden">
+            <div class="instruction-content">
+                <div class="instruction-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <h3>Instructions</h3>
+                </div>
+                <ol>
+                    <li>Placez vos fichiers GTFS dans <code>/public/data/gtfs/</code></li>
+                    <li>Placez votre fichier GeoJSON dans <code>/public/data/map.geojson</code></li>
+                    <li>Rafraîchissez la page</li>
+                    <li>Les bus en circulation s'affichent automatiquement</li>
+                    <li>Cliquez sur un bus pour voir la ligne, le prochain arrêt et la destination</li>
+                </ol>
+                <button id="close-instructions">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    Fermer
+                </button>
+            </div>
+        </div>
+
+    </div> 
+
+    <div id="itinerary-results-container" class="hidden">
+        
+        <div id="results-side-panel">
+            
+            <div id="itinerary-edit-panel">
+                <div class="itinerary-edit-header">
+                    <button id="btn-back-to-dashboard-from-results" class="btn-icon-round">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <h2>Itinéraires</h2>
+                </div>
+
+                <div class="itinerary-edit-form">
+                    <div class="form-group" style="position: relative;">
+                        <label for="results-planner-from">DÉPART (obligatoire)</label>
+                        <input type="text" id="results-planner-from" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                        <div id="results-from-suggestions" class="autocomplete-suggestions"></div>
+                        
+                        <button class="btn-icon-round btn-geolocate" id="results-geolocate-btn" aria-label="Utiliser ma position" disabled>
+                            </button>
+                    </div>
+
+                    <button class="btn-icon-round btn-swap-vertical" id="results-btn-swap-direction" aria-label="Inverser le départ et l'arrivée">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.6v-2.6c0-1.1.9-2 2-2h16"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.4v2.6c0 1.1-.9 2-2 2H3"/></svg>
+                    </button>
+
+                    <div class="form-group" style="position: relative;">
+                        <label for="results-planner-to">ARRIVÉE (obligatoire)</label>
+                        <input type="text" id="results-planner-to" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                        <div id="results-to-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="results-planner-when-btn">QUAND</label>
+                        <button id="results-planner-when-btn" class="btn-when-inline">
+                            <span>Partir maintenant</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        
+                        <div id="results-planner-options-popover" class="hidden">
+                            <div class="popover-tabs">
+                                <button class="popover-tab active" data-tab="partir">Partir</button>
+                                <button class="popover-tab" data-tab="arriver">Arriver</button>
+                            </div>
+                            <div class="popover-content">
+                                <div class="form-group">
+                                    <label for="results-popover-date">DATE DU TRAJET</label>
+                                    <select id="results-popover-date" class="real-select"></select>
+                                </div>
+                                <div class="popover-time-inputs">
+                                    <div class="form-group">
+                                        <label for="results-popover-hour">HEURE</label>
+                                        <select id="results-popover-hour" class="real-select"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="results-popover-minute">MINUTES</label>
+                                        <select id="results-popover-minute" class="real-select"></select>
+                                    </div>
+                                </div>
+                                <button id="results-popover-submit-btn" class="btn btn-primary btn-popover-submit">Partir maintenant</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="results-planner-submit-btn" class="btn btn-primary btn-full-width">Lancer la recherche</button>
+                </div>
+            </div>
+
+            <div id="results-mode-tabs" class="hidden">
+                <button class="mode-tab" data-mode="ALL">
+                    </button>
+                <button class="mode-tab" data-mode="BUS">
+                    </button>
+                <button class="mode-tab" data-mode="BIKE">
+                    </button>
+                <button class="mode-tab" data-mode="WALK">
+                    </button>
+            </div>
+            
+            <div class="results-list-wrapper">
+                <div class="results-list">
+                    </div>
+            </div>
+
+        </div>
+
+        <div id="results-map"></div>
+
+    </div>
+
+
+    <div id="itinerary-detail-container" class="hidden">
+        
+        <div id="detail-map-header">
+            <button id="btn-back-to-results" class="btn-icon-round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            
+            <div id="detail-map-summary"></div>
+        </div>
+
+        <div id="detail-map"></div>
+
+        <div id="detail-panel-wrapper">
+            
+            <div class="panel-handle"></div>
+            
+            <div id="detail-panel-content">
+                </div>
+        </div>
+
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

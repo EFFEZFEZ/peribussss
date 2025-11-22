@@ -1,0 +1,2882 @@
+/* =========================================
+ * NOUVEAU THÈME & VARIABLES
+ * ========================================= */
+:root {
+    /* Identité graphique (inspirée) */
+    --color-blue: #007bff;
+    --color-purple: #6f42c1;
+    --color-orange: #fd7e14;
+    --color-green: #28a745;
+    --color-red: #dc3545;
+    --color-yellow: #ffc107;
+    --color-green-check: #28a745;
+    --color-tab-active: #008080; /* Vert/Bleu canard pour les onglets */
+    --color-nav-condensed-bg: #005a9c; /* Bleu foncé (type Irigo) */
+    --color-nav-condensed-hover: #004a80;
+
+    /* Palette de base */
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary: #64748b;
+    --bg-light: #f8f9fa; /* Fond de page gris clair */
+    --bg-main: #ffffff;
+    --bg-secondary: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+}
+
+/* =========================================
+ * NOUVELLE STRUCTURE DE BASE
+ * ========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* *** CORRECTION V28 *** */
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden; 
+    -webkit-font-smoothing: antialiased;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text-primary);
+    background-color: var(--bg-light); 
+}
+
+/* Le body est le conteneur flex principal */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    /* Par défaut, le body scrolle (pour le dashboard) */
+    overflow-y: auto;
+}
+
+/* Verrouille le scroll UNIQUEMENT pour les vues plein écran */
+body.view-is-locked {
+    position: fixed; /* Plus fiable que overflow: hidden */
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Conteneurs de vue principaux */
+#dashboard-container {
+    flex: 1 0 auto;
+    /* Le dashboard utilise le scroll naturel du body - AUCUNE règle overflow */
+}
+
+/* *** CORRECTION IDFM-STYLE *** */
+/* Les conteneurs pleins écran sont gérés différemment */
+#map-container, #itinerary-results-container {
+    flex: 1 0 auto; 
+    display: flex;
+    overflow: hidden; /* Ces vues plein écran ne scrollent pas */
+}
+
+
+.hidden {
+    display: none !important;
+}
+/* =========================================
+ * NOUVELLE EN-TÊTE (Effet "Liquid Glass")
+ * ========================================= */
+#main-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); 
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    position: sticky; /* Reste sticky pour le dashboard */
+    top: 0;
+    z-index: 1050;
+    flex-shrink: 0; /* Ne doit pas rétrécir */
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+    .hero-section .planner-block,
+    .instruction-content,
+    #main-header {
+        background: rgba(255, 255, 255, 0.95);
+    }
+}
+
+/* *** CORRECTION V30 *** */
+/* Cache le header principal sur les vues plein écran */
+body.view-is-locked #main-header {
+    display: none;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+/* Colour just for the brand word (e.g. <span class="brand-name">Péribus</span>) */
+.brand-name {
+    color: #2563eb; /* var(--primary) */
+}
+.header-logo-icon {
+    color: var(--primary);
+}
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* =========================================
+ * NOUVEAU BANDEAU D'ALERTE
+ * ========================================= */
+#alert-banner {
+    position: sticky;
+    top: 65px; /* Sous l'en-tête (pour le dashboard) */
+    z-index: 1040;
+    background: var(--color-yellow);
+    color: #111;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    flex-shrink: 0; 
+}
+#alert-banner.type-perturbation { background: var(--color-orange); color: white; }
+#alert-banner.type-annulation { background: var(--color-red); color: white; }
+#alert-banner.type-retard { background: var(--color-yellow); color: #111; }
+
+#alert-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+#alert-banner-content strong {
+    margin-right: 8px;
+}
+#alert-banner-close {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+}
+#alert-banner-close:hover { opacity: 1; }
+
+/* =========================================
+ * NOUVEAU TABLEAU DE BORD (HALL)
+ * ========================================= */
+#dashboard-main {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* NOUVELLE STRUCTURE "HUB" */
+.hero-section {
+    background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+        url('https://www.vie-economique.com/wp-content/uploads/sites/13/2024/12/shutterstock_2365894285-scaled.jpg');
+    
+    background-size: cover;
+    background-position: center;
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 1.5rem; 
+    box-shadow: var(--shadow-md);
+}
+
+.hero-section .planner-block-wrapper {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 auto; 
+    max-width: 900px;
+    position: relative; 
+    z-index: 2; 
+}
+
+.hero-section .planner-block {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.hero-section .planner-block .planner-title-bar h3 {
+    font-size: 1.5rem; 
+    color: var(--text-primary);
+}
+.hero-section .planner-block .planner-title-bar svg {
+    color: var(--primary);
+}
+.planner-block .planner-title-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+.planner-block .planner-title-bar svg {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+/* STYLES PLANIFICATEUR IDFM (HALL) */
+.planner-form {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch; /* ensure inputs align to the same top/left */
+    width: 100%; /* take full width of the planner block */
+}
+.planner-inputs {
+    display: flex;
+    flex: 1;
+    gap: 0.5rem; 
+    align-items: stretch;
+    padding-left: 0; /* ensure alignment with planner block padding */
+    padding-right: 0;
+}
+.planner-inputs .form-group {
+    flex: 1;
+    margin-bottom: 0;
+    min-width: 0; /* prevent flex children from overflowing and causing centering issues */
+}
+.planner-search-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+
+.main-nav-buttons-condensed {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2.5rem; 
+    max-width: 900px; 
+    margin-left: auto;
+    margin-right: auto;
+    position: relative; 
+    z-index: 1; /* Inférieur au planificateur */
+}
+
+.nav-button-condensed {
+    background: rgba(0, 90, 156, 0.75); 
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+.nav-button-condensed:hover {
+    background: rgba(0, 74, 128, 0.9); 
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 90, 156, 0.3); 
+}
+.nav-button-condensed svg {
+    width: 28px;
+    height: 28px;
+}
+.nav-button-condensed .notification-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+}
+
+.nav-button-condensed[data-view="horaires"] {
+    background: rgba(40, 167, 69, 0.75); 
+}
+.nav-button-condensed[data-view="horaires"]:hover {
+    background: rgba(35, 139, 58, 0.9); 
+    box-shadow: 0 10px 15px -3px rgba(40, 167, 69, 0.4); 
+}
+.nav-button-condensed[data-view="info-trafic"] {
+    background: rgba(253, 126, 20, 0.75); 
+}
+.nav-button-condensed[data-view="info-trafic"]:hover {
+    background: rgba(228, 113, 18, 0.9); 
+    box-shadow: 0 10px 15px -3px rgba(253, 126, 20, 0.4); 
+}
+
+.bottom-content-wrapper {
+    margin-top: 2.5rem; 
+    margin-bottom: 2rem; 
+    max-width: 900px; 
+    margin-left: auto;
+    margin-right: auto;
+}
+.bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.bottom-grid .card {
+    display: flex; 
+    flex-direction: column;
+}
+.bottom-grid .card h4 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+.bottom-grid .card p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    flex: 1 0 auto; 
+}
+
+.key-figures-card p {
+    margin-bottom: 1.5rem;
+}
+.key-figures-grid {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    gap: 1rem;
+}
+.key-figure-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.key-figure-number {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.1;
+}
+.key-figure-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+.btn-block-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 1.5rem; 
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+}
+.btn-block-link svg {
+    transition: transform 0.2s ease;
+}
+.btn-block-link:hover svg {
+    transform: translateY(3px);
+}
+
+
+/* =========================================
+ * VUES INTERNES & TRANSITIONS (V48 - SANS ANIMATION)
+ * ========================================= */
+#dashboard-hall {
+    /* SUPPRIMÉ: transition */
+    visibility: visible;
+}
+#dashboard-hall:not(.view-is-active) {
+    /* SUPPRIMÉ: opacity, transform */
+    display: none; /* V48 - Remplacement immédiat */
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+#dashboard-content-view {
+    /* SUPPRIMÉ: opacity, transform, transition */
+    display: none; /* V48 - Remplacement immédiat */
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+}
+#dashboard-content-view.view-is-active {
+    /* SUPPRIMÉ: opacity, transform */
+    display: block; /* V48 - Remplacement immédiat */
+    pointer-events: auto;
+    max-height: 5000px; 
+}
+
+#btn-back-to-hall {
+    margin-bottom: 1.5rem;
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding-left: 0.75rem;
+}
+#btn-back-to-hall:hover {
+    background: var(--border);
+    border-color: var(--secondary);
+}
+#btn-back-to-hall svg {
+    margin-right: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.content-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 900px; 
+    margin: 0 auto;
+    gap: 1.5rem;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    /* SUPPRIMÉ (V48): opacity, transform, transition, max-height, overflow, padding: 0 1.5rem */
+}
+#dashboard-hall .card {
+    /* SUPPRIMÉ (V48): opacity, transform */
+    max-height: 2000px;
+    padding: 1.5rem;
+}
+
+/* V48: Règle séparée pour cacher/montrer les cartes internes */
+#dashboard-content-view .card {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 1.5rem;
+    display: none; /* V48: Caché par défaut */
+}
+#dashboard-content-view .card.view-active {
+    /* SUPPRIMÉ (V48): opacity, transform */
+    display: block; /* V48: Affiché si actif */
+    max-height: 2000px; 
+    padding: 1.5rem; 
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.form-group input[type="text"] {
+    width: 100%;
+    box-sizing: border-box; /* ensure padding doesn't change visual width */
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    background: var(--bg-main); 
+    
+    /* ✅ V57: Padding à droite pour le bouton géoloc */
+    padding-right: 50px;
+}
+.form-group input[type="text"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+
+/* =========================================
+ * CARTE HORAIRES
+ * ========================================= */
+#horaires-search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+#horaires-search-container svg {
+    position: absolute;
+    left: 14px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    z-index: 1;
+}
+#horaires-search-bar {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem; 
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+}
+#horaires-search-bar:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+#horaires-search-results {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 2000;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+.search-result-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--bg-secondary); }
+.search-result-item strong { color: var(--primary); }
+
+.fiche-horaire-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 2rem 0 1rem 0;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+#fiche-horaire-container {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-main); 
+}
+.accordion-group details {
+    border-bottom: 1px solid var(--border);
+}
+.accordion-group details:last-child {
+    border-bottom: none;
+}
+.accordion-group summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--bg-secondary);
+    list-style: none; 
+    transition: background 0.2s ease;
+}
+.accordion-group summary:hover {
+    background: #f1f5f9;
+}
+.accordion-group summary::-webkit-details-marker {
+    display: none; 
+}
+.accordion-group summary::after {
+    content: '+';
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease-in-out;
+}
+.accordion-group details[open] summary {
+    background: var(--bg-main);
+}
+.accordion-group details[open] summary::after {
+    transform: rotate(45deg);
+}
+
+.accordion-content {
+    background: var(--bg-main);
+    padding: 0 1.25rem; 
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s ease-in-out;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+details[open] .accordion-content {
+    max-height: 1000px; 
+}
+.accordion-content-inner {
+    padding: 1rem 0;
+}
+.accordion-content-inner a {
+    display: block;
+    padding: 0.75rem 0;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+}
+.accordion-content-inner a:last-child {
+    border-bottom: none;
+}
+.accordion-content-inner a:hover {
+    text-decoration: underline;
+}
+
+#horaires-search-shortcut {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+}
+#horaires-search-shortcut p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+#btn-horaires-search-focus {
+    font-weight: 600;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+
+/* =========================================
+ * CARTE INFO TRAFIC
+ * ========================================= */
+.tabs {
+    display: flex;
+    border: 1px solid var(--color-tab-active);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    background: var(--bg-main);
+}
+.tab {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: none;
+    background: transparent; 
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-tab-active);
+    transition: all 0.2s ease;
+    text-transform: capitalize;
+}
+.tab.active {
+    background: var(--color-tab-active);
+    color: white;
+}
+.tab:not(.active):hover {
+    background: rgba(0, 128, 128, 0.1); 
+}
+.tab:first-child {
+    border-right: 1px solid var(--color-tab-active);
+}
+.tab-content {
+    max-height: 450px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.trafic-group {
+    margin-bottom: 1.5rem;
+}
+.trafic-group h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+.trafic-badge-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 0.75rem;
+}
+.trafic-badge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    min-width: 45px;
+}
+.line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 0.375rem 0.625rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: white;
+    border-radius: var(--radius-md); 
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+.trafic-badge-item:hover .line-badge {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.status-indicator-triangle {
+    width: 0; 
+    height: 0; 
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    margin-top: 5px;
+}
+
+/* =========================================
+ * VUE CARTE (PLEIN ÉCRAN)
+ * ========================================= */
+#map-container {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-light);
+}
+
+#map-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1; 
+    position: relative;
+}
+
+#map {
+    flex: 1;
+    position: relative;
+    z-index: 1; 
+    background: #f0f0f0;
+    touch-action: none;
+}
+
+#top-bar {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.875rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: nowrap; 
+    z-index: 10;
+}
+
+#map-container #btn-back-to-dashboard-from-map {
+    padding-left: 0.75rem;
+    padding-right: 1.25rem;
+}
+#map-container #btn-back-to-dashboard-from-map svg {
+    margin-right: 0.25rem;
+}
+
+#clock {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+#clock svg { opacity: 0.7; }
+#current-time { font-weight: 600; color: var(--text-primary); }
+#date-indicator {
+    background: var(--bg-secondary);
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    border: 1px solid var(--border);
+}
+
+#status-info {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    margin-left: auto; 
+    white-space: nowrap;
+}
+#bus-count {
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+#data-status { color: var(--text-secondary); }
+#data-status.loaded { color: #059669; }
+#data-status.error { color: #dc2626; }
+
+#route-filter-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 340px;
+    max-height: 100vh;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(0); 
+}
+#route-filter-panel.hidden {
+    transform: translateX(100%); 
+}
+.panel-handle { 
+    display: none; 
+    cursor: pointer;
+} 
+
+/* =========================================
+ * DESIGN MOBILE (VUE CARTE & SOUS-PAGES)
+ * ========================================= */
+@media (max-width: 768px) {
+    
+    .main-nav-buttons-condensed {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .content-cards {
+        grid-template-columns: 1fr;
+    }
+    .bottom-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* V48: Règle simplifiée */
+    #dashboard-content-view.view-is-active {
+        padding-top: 0; 
+    }
+    #btn-back-to-hall {
+        margin-bottom: 1rem; 
+    }
+    .content-cards {
+        gap: 1rem; 
+    }
+    #info-trafic .tab-content {
+        max-height: none;
+        overflow-y: visible;
+    }
+
+
+    /* --- VUE CARTE MOBILE --- */
+    
+    #map-view #top-bar {
+        background: none;
+        border: none;
+        padding: 0;
+        display: contents; 
+        position: relative;
+    }
+    
+    #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map,
+    #map-container #map-view #top-bar > #clock,
+    #map-container #map-view #top-bar > #status-info,
+    #map-container #map-view #top-bar > #btn-toggle-filter {
+        display: inline-flex !important; 
+        position: fixed !important; 
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
+    }
+    
+    #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map {
+        /* *** CORRECTION V29 (V27) *** */
+        top: calc(15px + env(safe-area-inset-top));
+        left: 15px;
+        padding: 0.5rem 0.75rem;
+        color: var(--primary); 
+    }
+    #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map span { display: none; }
+    #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map svg { margin-right: 0; }
+    
+    #map-container #map-view #top-bar > #clock {
+        display: flex !important; 
+        /* *** CORRECTION V29 (V27) *** */
+        top: calc(15px + env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 6px 10px;
+        border-radius: var(--radius-full);
+        z-index: 999; 
+    }
+    #map-container #map-view #top-bar > #clock #date-indicator { display: none; }
+    
+    #map-container #map-view #top-bar > #status-info {
+        display: flex !important; 
+        /* *** CORRECTION V29 (V27) *** */
+        top: calc(15px + env(safe-area-inset-top));
+        right: 15px;
+        margin-left: 0;
+        padding: 6px 10px;
+        border-radius: var(--radius-full);
+        z-index: 999;
+    }
+    #map-container #map-view #top-bar > #status-info #data-status { display: none; }
+    
+    #map-container #map-view #top-bar > #btn-toggle-filter {
+        top: auto;
+        left: auto;
+        /* *** CORRECTION V29 (V27) *** */
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        padding: 0;
+        justify-content: center;
+        color: var(--text-primary);
+        z-index: 1501; 
+    }
+    #map-container #map-view #top-bar > #btn-toggle-filter span { display: none; }
+    #map-container #map-view #top-bar > #btn-toggle-filter svg { margin: 0; width: 20px; height: 20px; }
+    
+    #route-filter-panel {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 80vh;
+        border-left: none;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        transform: translateY(0); 
+        /* *** CORRECTION V29 (V27) *** */
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    #route-filter-panel.hidden { transform: translateY(100%); }
+    .panel-handle {
+        display: block; 
+        width: 40px;
+        height: 4px;
+        background: var(--border);
+        border-radius: var(--radius-full);
+        margin: 8px auto;
+    }
+
+    /* MOBILE HEADER: fixed at top, small logo left, centered stacked title */
+    #main-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1200;
+        height: 56px;
+        padding: 0; /* content padding handled by .header-content */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--border);
+    }
+    .header-content {
+        display: flex;
+        justify-content: flex-start; /* logo + title aligned to the left */
+        align-items: center;
+        height: 56px;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 0 1rem;
+        gap: 0.75rem; /* espace entre logo et titre */
+    }
+    /* LOGO on the left (static flow) */
+    .logo {
+        position: static;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        order: 1; /* logo first */
+        font-size: 1rem;
+        font-weight: 800;
+    }
+    .header-logo-img {
+        height: 42px;
+        width: auto;
+        object-fit: contain;
+    }
+    .header-title-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* title aligned left */
+        text-align: left;
+        line-height: 1.1;
+        order: 2; /* title after logo */
+    }
+    .brand-name {
+        font-size: 1.25rem;
+        margin: 0;
+        display: block;
+        font-weight: 800;
+    }
+    .brand-sub {
+        font-size: 0.8rem;
+        margin-top: 2px;
+        display: block;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    /* Prevent content from being hidden behind fixed header */
+    body {
+        padding-top: 56px;
+    }
+
+    /* Ensure last result is fully visible above bottom UI (mobile) */
+    .results-list-wrapper {
+        padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    }
+    /* Also add a small inner padding on the list itself */
+    .results-list {
+        padding-bottom: 2rem;
+    }
+}
+
+
+/* =========================================
+ * STYLES COMMUNS
+ * ========================================= */
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full); 
+    background: var(--bg-main);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+.btn:hover { background: var(--bg-secondary); border-color: var(--secondary); }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+.btn-primary svg { margin-right: 0.25rem; }
+.btn-secondary {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.btn-secondary:hover {
+    background: var(--border);
+    border-color: var(--secondary);
+}
+
+/* NOUVEAU : Bouton icône rond */
+.btn-icon-round {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.btn-icon-round:hover {
+    background: var(--bg-secondary);
+    border-color: var(--secondary);
+}
+
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg-secondary); 
+}
+.filter-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.btn-close {
+    background: var(--bg-secondary);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    line-height: 1;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.btn-close:hover { background: var(--border); color: var(--text-primary); }
+.filter-actions {
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg-secondary); 
+}
+.btn-small {
+    padding: 0.375rem 0.875rem;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    border-radius: var(--radius-full); 
+}
+.btn-small:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+.route-list {
+    overflow-y: auto;
+    flex: 1;
+    background: transparent;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+.category-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+}
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+.category-title strong { color: var(--text-primary); }
+.category-count { color: var(--text-secondary); font-size: 0.75rem; font-weight: 400; }
+.category-actions { display: flex; gap: 0.375rem; }
+.btn-category-action {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    border-radius: var(--radius-md); 
+}
+.btn-category-action:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+.category-routes { background: transparent; } 
+
+.route-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid var(--border);
+}
+.route-checkbox-item:last-child { border-bottom: none; }
+.route-checkbox-item:hover { background: rgba(0,0,0,0.05); } 
+
+.route-checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+.route-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 45px;
+    padding: 0.375rem 0.625rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: white;
+    border-radius: var(--radius-md); 
+    flex-shrink: 0;
+}
+.route-name {
+    flex: 1;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+#instructions {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    padding: 1rem;
+}
+#instructions.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.instruction-content {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    width: 100%;
+}
+.instruction-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+.instruction-header svg { color: var(--primary); }
+.instruction-header h3 { margin: 0; font-size: 1.125rem; }
+#instructions ol { margin-left: 1.5rem; line-height: 1.8; }
+#instructions code {
+    background: var(--bg-secondary);
+    padding: 0.2rem 0.5rem;
+    font-family: 'Courier New', monospace;
+    color: var(--primary);
+    font-size: 0.8125rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm); 
+}
+#close-instructions {
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-md); 
+}
+#close-instructions:hover { background: var(--primary-dark); }
+
+/* =========================================
+ * STYLES LEAFLET
+ * ========================================= */
+
+/* *** V49 - FIX BUG ANIMATION POPUP: Transition supprimée ici *** */
+.leaflet-marker-pane > *,
+.leaflet-popup-pane > * {
+    transition: none !important; /* V49: Supprime l'animation de 1000ms */
+}
+
+
+.leaflet-popup-content-wrapper {
+    border-radius: var(--radius-lg); 
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+.leaflet-popup-content { 
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    margin: 0;
+    min-width: 260px;
+    background: transparent; 
+}
+
+.bus-icon-rect div {
+    transition: all 0.2s ease;
+    border: 2px solid white;
+}
+.bus-icon-rect:hover div {
+    transform: scale(1.15);
+}
+.bus-icon-waiting div {
+    opacity: 0.6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+}
+
+.bus-status-perturbation div {
+    border: 3px solid var(--color-orange) !important;
+}
+.bus-status-retard div {
+    border: 3px solid var(--color-yellow) !important;
+}
+.bus-status-annulation div {
+    opacity: 0.3 !important;
+    border: 3px solid var(--color-red) !important;
+}
+
+.marker-cluster-small { background-color: rgba(181, 226, 140, 0.6); }
+.marker-cluster-small div { background-color: rgba(110, 204, 57, 0.6); }
+.marker-cluster-medium { background-color: rgba(241, 211, 87, 0.6); }
+.marker-cluster-medium div { background-color: rgba(240, 194, 12, 0.6); }
+.marker-cluster-large { background-color: rgba(253, 156, 115, 0.6); }
+.marker-cluster-large div { background-color: rgba(241, 128, 23, 0.6); }
+.marker-cluster { background-clip: padding-box; border-radius: 50%; }
+.marker-cluster div { width: 30px; height: 30px; margin-left: 5px; margin-top: 5px; text-align: center; border-radius: 50%; font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif; }
+.marker-cluster span { line-height: 30px; }
+
+.stop-marker-icon {
+    background: var(--secondary);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.leaflet-zoom-animated .stop-marker-icon {
+    transition: opacity 0.3s, transform 0.3s;
+}
+.stop-marker-icon:hover {
+    background: var(--primary);
+    transform: scale(1.3);
+}
+.stop-search-marker div {
+    background: var(--primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    height: 100%;
+}
+
+/* NOUVEAU V46: Marqueurs d'itinéraire */
+.itinerary-marker-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: var(--shadow-md);
+    border: 2px solid white;
+}
+.itinerary-marker-icon.start svg {
+    color: white;
+}
+.itinerary-marker-icon.end svg {
+    color: white;
+}
+.itinerary-marker-icon.correspondence svg {
+    color: white;
+}
+
+/* ✅ V57: NOUVEAU - Marqueur de position utilisateur */
+.user-location-marker {
+    background-color: #4a8cf7;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+.user-location-marker::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4a8cf7;
+    opacity: 0.2;
+    transform: translate(-50%, -50%);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { 
+        transform: translate(-50%, -50%) scale(0.5); 
+        opacity: 0.3; /* Au lieu de 0.2 */
+    }
+    50% { 
+        transform: translate(-50%, -50%) scale(0.8); 
+        opacity: 0.15; 
+    }
+    100% { 
+        transform: translate(-50%, -50%) scale(1); 
+        opacity: 0; 
+    }
+}
+
+/* ✅ V57: NOUVEAU - Bouton "Ma Position" sur les cartes */
+.leaflet-control-locate {
+    background-color: white;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.leaflet-control-locate:hover {
+    background-color: var(--bg-secondary);
+}
+.leaflet-control-locate svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-primary);
+}
+.leaflet-control-locate.following svg {
+    color: var(--primary);
+}
+
+
+.info-popup-content {
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+.info-popup-header {
+    background: var(--bg-secondary);
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+}
+.info-popup-body {
+    padding: 0.5rem;
+}
+.info-popup-body.bus-details {
+    padding: 0 0.875rem 0.625rem;
+}
+.info-popup-body p {
+    margin: 0.5rem 0; 
+    font-size: 0.875rem; 
+}
+.info-popup-body p strong {
+    font-weight: 600;
+}
+.info-popup-body .realtime-notice {
+    margin: 0.625rem 0 0 0; 
+    font-size: 0.75rem; 
+    color: var(--text-secondary);
+}
+.departure-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+.departure-item:last-child {
+    border-bottom: none;
+}
+.departure-item.empty {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.875rem;
+    justify-content: center;
+}
+.departure-info {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    overflow: hidden; 
+    flex: 1;
+}
+.departure-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 0.25rem 0.5rem;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    color: white;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.departure-dest {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.departure-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+.departure-time strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.wait-time {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.wait-time.imminent {
+    color: #059669; 
+    font-weight: 600;
+}
+
+
+/* =========================================
+ * STYLES PLANIFICATEUR (GÉNÉRAL)
+ * ========================================= */
+.planner-block .form-group label,
+.itinerary-edit-form .form-group label {
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    color: var(--text-secondary); 
+    text-transform: uppercase; 
+    margin-bottom: 0.375rem;
+}
+
+.btn-geolocate {
+    position: absolute;
+    top: 50%; /* Centre verticalement par rapport au champ */
+    transform: translateY(-50%);
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+}
+.btn-geolocate:hover {
+    background: var(--bg-secondary);
+    color: var(--primary);
+}
+.btn-geolocate:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ✅ V57: NOUVEAU - Spinner pour le bouton géoloc */
+.btn-geolocate .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+.btn-swap-direction {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--primary);
+    flex-shrink: 0;
+    margin-bottom: 0.125rem; 
+    transition: all 0.2s ease;
+}
+.btn-swap-direction:hover {
+    background: var(--bg-secondary);
+    transform: rotate(180deg);
+}
+
+.form-group-when {
+    position: relative; 
+    flex-shrink: 0;
+    margin-bottom: 0; 
+}
+.btn-when {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 180px; 
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: var(--bg-main);
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+}
+.btn-when:hover {
+    border-color: var(--primary);
+}
+.btn-when svg {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+.btn-when.popover-active svg {
+    transform: rotate(180deg);
+}
+
+/* Style pour le bouton "Quand" dans le formulaire des résultats */
+.btn-when-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: var(--bg-main);
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+}
+.btn-when-inline:hover {
+    border-color: var(--primary);
+}
+.btn-when-inline svg {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+.btn-when-inline.popover-active svg {
+    transform: rotate(180deg);
+}
+
+
+#planner-options-popover, #results-planner-options-popover {
+    position: absolute;
+    top: calc(100% + 8px); 
+    right: 0; 
+    width: 320px; 
+    background: var(--bg-main);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 1100;
+    overflow: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#planner-options-popover.hidden, #results-planner-options-popover.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+}
+/* Positionnement spécifique pour le popover des résultats */
+#results-planner-options-popover {
+    left: 0;
+    right: 0;
+    width: auto;
+}
+
+
+.popover-tabs {
+    display: flex;
+    background: var(--bg-secondary);
+}
+.popover-tab {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.popover-tab:hover {
+    color: var(--text-primary);
+}
+.popover-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.popover-content {
+    padding: 1rem;
+}
+.popover-time-inputs {
+    display: flex;
+    gap: 1rem;
+}
+.popover-time-inputs .form-group {
+    flex: 1;
+}
+
+.real-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    background: var(--bg-main); 
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 12px;
+    cursor: pointer;
+    padding-right: 2.5rem;
+}
+.real-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+
+.btn-popover-submit {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    justify-content: center;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-md);
+    z-index: 1000;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.suggestion-item:hover {
+    background: var(--bg-secondary);
+}
+.suggestion-item strong {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+
+@media (max-width: 900px) { 
+    .planner-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .planner-inputs {
+        flex-direction: column;
+        gap: 1rem; 
+    }
+    .btn-swap-direction {
+        display: none; 
+    }
+    .btn-when {
+        width: 100%; 
+    }
+    #planner-options-popover {
+        left: 0;
+        right: 0;
+        width: auto;
+    }
+}
+
+
+/* =========================================
+ * NOUVELLE VUE : RÉSULTATS D'ITINÉRAIRE
+ * ========================================= */
+
+/* Le conteneur principal est maintenant un flex en LIGNE */
+#itinerary-results-container {
+    display: flex;
+    flex-direction: row; /* Panneau à gauche, carte à droite */
+    flex: 1; /* Prend toute la hauteur restante sous le header */
+    background: var(--bg-light);
+    /* Assure que le conteneur ne dépasse pas la hauteur de la vue */
+    height: 100vh;
+}
+
+/* NOUVEAU : Panneau latéral (colonne) */
+#results-side-panel {
+    width: 400px; /* Largeur fixe type IDFM */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Prend toute la hauteur du conteneur */
+    background: var(--bg-main);
+    border-right: 1px solid var(--border);
+    z-index: 10;
+}
+
+/* NOUVEAU : Panneau d'édition IDFM */
+#itinerary-edit-panel {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.itinerary-edit-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    padding-top: calc(0.75rem + env(safe-area-inset-top)); /* Ajout V35 */
+}
+.itinerary-edit-header h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+}
+.itinerary-edit-form {
+    padding: 0 1.5rem 1rem;
+    position: relative;
+}
+.itinerary-edit-form .form-group {
+    margin-bottom: 0.75rem;
+}
+.itinerary-edit-form .form-group:last-of-type {
+    margin-bottom: 1rem;
+}
+
+/* ✅ V57: Ajustement du top pour le bouton géoloc */
+.itinerary-edit-form .btn-geolocate {
+    top: 22px; 
+}
+
+
+/* Bouton swap vertical */
+.btn-swap-vertical {
+    position: absolute;
+    top: 50px; /* Ajustement manuel pour le placer entre les deux */
+    right: 1rem;
+    z-index: 2;
+    transform: rotate(90deg); /* Pivoter l'icône */
+}
+.btn-swap-vertical:hover {
+    transform: rotate(270deg); /* 90 + 180 */
+}
+/* Bouton "Lancer la recherche" pleine largeur */
+.btn-full-width {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+}
+
+/* NOUVEAU : Onglets de mode de transport */
+#results-mode-tabs {
+    display: flex;
+    justify-content: space-around;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    flex-shrink: 0; /* Ne doit pas rétrécir */
+}
+.mode-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    flex: 1;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.mode-tab:hover {
+    background: var(--bg-main);
+}
+.mode-tab.active {
+    background: var(--bg-main);
+    border-bottom-color: var(--primary);
+}
+.mode-tab.hidden {
+    display: none;
+}
+.mode-tab svg {
+    width: 24px;
+    height: 24px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+.mode-tab.active svg {
+    color: var(--primary);
+}
+.mode-tab-duration {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.mode-tab-duration.empty {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+
+/* NOUVEAU : Conteneur pour la liste des résultats */
+.results-list-wrapper {
+    flex: 1; /* Prend tout l'espace restant dans le panneau latéral */
+    overflow-y: auto; /* C'est LUI qui scrolle */
+    overscroll-behavior: contain;
+}
+
+/* La liste elle-même n'a besoin que de padding */
+.results-list {
+    padding: 1rem;
+}
+
+/* La CARTE prend le reste de l'espace */
+#results-map {
+    flex: 1; /* Prend tout l'espace restant à droite */
+    height: 100%;
+    background: #e5e5e5;
+}
+
+
+.results-message {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.results-message.error {
+    color: var(--color-red);
+    font-style: normal;
+    font-weight: 600;
+}
+
+.route-option-wrapper {
+    margin-bottom: 1rem;
+}
+.route-option-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+
+/* =========================================
+ * NOUVEAU STYLE DE CARTE (V40 - Simplifié)
+ * ========================================= */
+.route-option {
+    display: flex;
+    flex-direction: column; /* Mise en page sur 2 lignes */
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 0.75rem; /* Espace entre la ligne de bus et le footer */
+}
+.route-option.is-active,
+.route-option:hover {
+    border-color: var(--primary);
+    background: var(--bg-main);
+}
+
+/* --- (1) Ligne des bus --- */
+.route-summary-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap; /* Permet le passage à la ligne */
+}
+.route-summary-bus-icon {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    /* NOUVEAU: pour aligner les icônes */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+.route-summary-bus-icon svg {
+    width: 20px;
+    height: 20px;
+}
+.route-summary-dot {
+    color: var(--text-secondary);
+    font-weight: 600;
+    align-self: center;
+}
+.route-line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    font-size: 0.9rem;
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.5rem;
+    min-width: 28px;
+    text-align: center;
+}
+
+/* --- (2) Footer (Temps + Durée) --- */
+.route-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.route-time {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.route-duration {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.route-duration-eco {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #1e8e3e; /* Vert "éco" */
+}
+.route-duration-eco svg {
+    width: 16px;
+    height: 16px;
+}
+/* *** FIN DES NOUVEAUX STYLES (V40) *** */
+
+
+/* --- Styles pour les détails d'itinéraire (PC - Accordéon) --- */
+/* (Ces styles s'appliqueront > 768px) */
+.route-details {
+    padding: 1rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: -0.5rem; /* Chevauche la carte */
+    animation: fadeIn 0.3s ease;
+}
+.route-details.hidden {
+    display: none;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* *** NOUVEAU V34 : Styles pour l'accordéon PC *** */
+.route-details .step-detail {
+    display: flex;
+    position: relative;
+    padding-left: 3.5rem; /* MODIFIÉ: 3rem -> 3.5rem (plus d'espace) */
+    margin-bottom: 1.5rem;
+    /* variable --line-color définie inline par JS */
+}
+.route-details .step-detail:last-child {
+    margin-bottom: 0;
+}
+.route-details .step-detail::before { /* Ligne verticale */
+    content: '';
+    position: absolute;
+    left: 19px; /* Centre de l'icône de 40px */
+    top: 24px;
+    bottom: -1.5rem;
+    width: 4px; /* Augmenté pour la visibilité */
+    background: var(--line-color, var(--border));
+}
+.route-details .step-detail:last-child::before {
+    display: none;
+}
+/* *** CORRECTION V36 : Utilise text-secondary pour le contraste *** */
+.route-details .step-detail.walk::before,
+.route-details .step-detail.bicycle::before { /* Ajout vélo */
+    background: repeating-linear-gradient(
+        var(--text-secondary) 0,
+        var(--text-secondary) 4px,
+        transparent 4px,
+        transparent 8px
+    );
+}
+
+/* *** NOUVEAU V36 : Point de connexion (cercle) *** */
+.route-details .step-detail::after {
+    content: '';
+    position: absolute;
+    left: 14px; /* (40px icon / 2) - ( (12px dot + 2*2px border) / 2 ) */
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--bg-main);
+    border: 2px solid var(--line-color, var(--border));
+    z-index: 1; /* Derrière l'icône, mais devant la ligne */
+}
+.route-details .step-detail.walk::after,
+.route-details .step-detail.bicycle::after { /* Ajout vélo */
+    border-color: var(--text-secondary);
+}
+
+
+.route-details .step-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bg-main);
+    /* *** CORRECTION V36: Ajout du Z-index *** */
+    position: relative; /* z-index a besoin de position */
+    z-index: 2;
+}
+.route-details .step-detail.walk .step-icon,
+.route-details .step-detail.bicycle .step-icon { /* Ajout vélo */
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+.route-details .step-icon .route-line-badge {
+    font-size: 1.1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.route-details .step-info {
+    display: flex;
+    flex-direction: column;
+    padding-top: 4px; /* Aligner avec l'icône */
+}
+.route-details .step-instruction {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.route-details .step-duration-inline {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+}
+.route-details .step-sub-instruction {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+.route-details .step-stop-point {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+    position: relative;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+.route-details .step-stop-point::before { /* Puce avant le temps/arrêt */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+}
+.route-details .step-stop-point .step-time-detail {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+}
+.route-details .step-stop-point strong {
+    font-weight: 700;
+}
+
+.route-details .intermediate-stops {
+    margin: 0.5rem 0 0.5rem 1rem;
+}
+.route-details .intermediate-stops summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--primary);
+    list-style: none; /* Cache le marqueur par défaut */
+    padding: 0.25rem 0;
+}
+.route-details .intermediate-stops summary::-webkit-details-marker {
+    display: none; /* Cache le marqueur sur Chrome/Safari */
+}
+.route-details .intermediate-stops summary .chevron {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+.route-details .intermediate-stops[open] summary .chevron {
+    transform: rotate(180deg);
+}
+.route-details .intermediate-stops-list {
+    margin: 0.5rem 0 0 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--line-color, var(--border));
+    list-style-type: none;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+.route-details .intermediate-stops-list li {
+    position: relative;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+}
+.route-details .intermediate-stops-list li::before { /* Puce pour la liste d'arrêts */
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 0.7em;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--line-color, var(--border));
+}
+
+/* NOUVEAU V46: Styles pour les étapes de marche détaillées */
+.route-details .intermediate-stops-list.walk-steps {
+    border-left-color: transparent;
+    padding-left: 0;
+    margin-left: 0;
+    font-weight: 500;
+}
+.route-details .intermediate-stops-list.walk-steps li {
+    padding-left: 0;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+.route-details .intermediate-stops-list.walk-steps li::before {
+    display: none;
+}
+.route-details .intermediate-stops-list.walk-steps svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    margin-top: 0.2em;
+}
+.route-details .intermediate-stops-list .walk-step-info {
+    display: flex;
+    flex-direction: column;
+}
+.route-details .intermediate-stops-list .walk-step-meta {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+
+/* =========================================
+ * VUE 3: DÉTAIL D'ITINÉRAIRE (MOBILE IDFM)
+ * ========================================= */
+
+#itinerary-detail-container {
+    /* Caché par défaut, géré par JS */
+    display: none;
+}
+
+/* Styles mobiles pour la vue résultats (Étape 1: Liste) */
+@media (max-width: 768px) {
+    /* AMÉLIORATION LECTURE (mobile) */
+    .wait-time,
+    .departure-time strong,
+    .step-time-detail {
+        font-size: 0.875rem; /* Au lieu de 0.8125rem */
+    }
+
+    /* ÉTAPE 1: VUE LISTE (IDFM-style) */
+    
+    /* Rétablit la direction en colonne */
+    #itinerary-results-container {
+        flex-direction: column;
+        /* *** CORRECTION V35: Hauteur dynamique pour s'adapter à Safari *** */
+        height: 100vh; 
+    }
+    
+    /* **CORRECTION IDFM**: Cache la carte sur la vue liste */
+    #itinerary-results-container #results-map {
+        display: none;
+    }
+
+    /* Le panneau latéral prend tout l'écran */
+    #results-side-panel {
+        width: 100%;
+        flex: 1; /* Prend l'espace restant */
+        border-right: none;
+        height: auto; /* Hauteur auto pour s'adapter au flex: 1 */
+        overflow-y: auto; /* Le panneau ENTIER scrolle */
+    }
+    
+    #results-side-panel .itinerary-edit-header {
+        padding-top: calc(0.75rem + env(safe-area-inset-top));
+    }
+    
+    /* Le wrapper de la liste ne doit plus scroller, c'est le parent */
+    .results-list-wrapper {
+        flex: none; /* Ne grandit pas, s'adapte au contenu */
+        overflow-y: visible;
+    }
+    
+    .itinerary-edit-header {
+        padding: 0.5rem 0.75rem;
+        gap: 0.75rem;
+    }
+    .itinerary-edit-form {
+        padding: 0 0.75rem 1rem;
+    }
+    
+    /* ✅ V57: Positionnement du bouton géoloc (mobile) */
+    .itinerary-edit-form .btn-geolocate {
+        top: 22px; /* Ajusté pour le label mobile */
+    }
+
+    .btn-swap-vertical {
+        top: 48px;
+        right: 0.5rem;
+    }
+
+    /* --- Styles mobiles pour les détails d'itinéraire (ACCORDÉON PC) --- */
+    /* On cache l'accordéon PC sur mobile */
+    .route-details {
+        display: none !important;
+    }
+
+
+    /* ============================================ */
+    /* ÉTAPE 2 & 3: VUE DÉTAIL (Overlay IDFM-style) */
+    /* ============================================ */
+
+    #itinerary-detail-container {
+        display: flex; /* Rendre visible */
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--bg-main);
+        z-index: 1100;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        padding-top: env(safe-area-inset-top);
+    }
+    #itinerary-detail-container.is-active {
+        transform: translateX(0);
+    }
+
+    /* Style du header de la carte */
+    #detail-map-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1010;
+        padding: calc(15px + env(safe-area-inset-top)) 1rem 1rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0));
+        transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    }
+    /* Bouton retour blanc */
+    #detail-map-header #btn-back-to-results {
+        background: var(--bg-main);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Résumé du trajet dans le header */
+    #detail-map-summary {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(5px);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-full);
+        box-shadow: var(--shadow-md);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    #detail-map-summary .route-time { margin-right: 0.75rem; }
+    #detail-map-summary .route-duration { color: var(--text-secondary); }
+
+    /* La carte (Étape 2) */
+    #detail-map {
+        width: 100%;
+        height: 45vh; /* 45% de l'écran */
+        flex-shrink: 0;
+        transition: height 0.3s ease-in-out;
+        background: #e5e5e5;
+    }
+
+    /* Le panneau de détails (Étape 2) */
+    #detail-panel-wrapper {
+        width: 100%;
+        height: 55vh; /* 55% de l'écran */
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        transition: height 0.3s ease-in-out;
+        
+        /* ✅ V50 (CORRECTION): Ajout d'un padding-top pour le "handle" */
+        padding-top: 20px; 
+        position: relative;
+    }
+    
+    /* ✅ V50 (CORRECTION): Positionnement du "handle" */
+    #detail-panel-wrapper .panel-handle {
+        display: block; 
+        position: absolute;
+        top: 8px; /* 8px depuis le haut du wrapper */
+        left: 50%;
+        transform: translateX(-50%);
+        /* Style (width, height, bg) hérité de .panel-handle */
+    }
+
+    #detail-panel-content {
+        /* ✅ V50 (CORRECTION): padding-top retiré (géré par le wrapper)
+           et padding-bottom long (15rem) conservé pour forcer le scroll.
+        */
+        padding: 0 0.75rem 15rem 0.75rem;
+    }
+
+    /* --- L'EFFET DE SCROLL (Étape 3) --- */
+    #itinerary-detail-container.is-scrolled #detail-map {
+        height: 120px; /* 10% (ou fixe 120px) */
+    }
+    #itinerary-detail-container.is-scrolled #detail-panel-wrapper {
+        height: calc(100vh - 120px);
+    }
+    
+    /* * ❌ V50 (CORRECTION) : CE BLOC EST SUPPRIMÉ.
+     * Il annulait le padding-bottom long et cassait le scroll.
+     */
+    /*
+    #itinerary-detail-container.is-scrolled #detail-panel-content {
+        padding-bottom: 1rem; 
+    }
+    */
+    
+    #itinerary-detail-container.is-scrolled #detail-map-header {
+        background: var(--bg-main);
+        box-shadow: var(--shadow-md);
+    }
+    
+   /* ============================================ */
+/* STYLAGE DES ÉTAPES (IDFM-style) */
+/* ============================================ */
+
+#detail-panel-content .step-detail {
+    display: flex;
+    position: relative;
+    padding-left: 3rem; /* MODIFIÉ: 2.5rem -> 3rem (plus d'espace) */
+    padding-bottom: 1.5rem;
+    min-height: 40px;
+    /* variable --line-color définie inline par JS */
+}
+
+#detail-panel-content .step-detail:last-child {
+    padding-bottom: 0;
+}
+
+#detail-panel-content .step-detail::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: -1.5rem; /* ⬅️ Correspond au padding-bottom de .step-detail */
+    width: 4px;
+    background: var(--line-color, var(--border));
+}
+
+/* Masquer la ligne pour la dernière étape */
+#detail-panel-content .step-detail:last-child::before {
+    bottom: 0; /* ⬅️ CHANGEMENT: au lieu de display: none */
+}
+    
+    /* Point de départ/arrêt */
+    #detail-panel-content .step-detail::after {
+        content: '';
+        position: absolute;
+        left: 11px; /* (32px / 2) - (12px / 2) + 1px */
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bg-main);
+        border: 2px solid var(--line-color, var(--border));
+        z-index: 1; /* V36 */
+    }
+    
+    #detail-panel-content .step-detail.walk::before,
+    #detail-panel-content .step-detail.bicycle::before { /* Ajout vélo */
+        background: repeating-linear-gradient(
+            var(--line-color, var(--text-secondary)) 0,
+            var(--line-color, var(--text-secondary)) 4px,
+            transparent 4px,
+            transparent 8px
+        );
+    }
+    #detail-panel-content .step-detail.walk::after,
+    #detail-panel-content .step-detail.bicycle::after { /* Ajout vélo */
+        border-color: var(--line-color, var(--text-secondary));
+    }
+    
+    /* Icône de l'étape */
+    #detail-panel-content .step-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--bg-main);
+        z-index: 2; /* Au-dessus de la ligne */
+    }
+    
+    /* Icône pour la MARCHE */
+    #detail-panel-content .step-detail.walk .step-icon,
+    #detail-panel-content .step-detail.bicycle .step-icon { /* Ajout vélo */
+        background: var(--bg-main);
+        color: var(--text-secondary);
+    }
+    #detail-panel-content .step-detail.walk .step-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    /* NOUVEAU: Ajout vélo */
+    #detail-panel-content .step-detail.bicycle .step-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Icône pour le BUS (badge) */
+    #detail-panel-content .step-icon .route-line-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        min-width: 32px;
+        height: 32px;
+        border-radius: 50%; /* Rond comme IDFM */
+        box-shadow: var(--shadow-sm);
+        border: 2px solid white;
+    }
+    
+    #detail-panel-content .step-info {
+        display: flex;
+        flex-direction: column;
+        padding-top: 4px; /* Aligner avec l'icône */
+    }
+    
+    #detail-panel-content .step-instruction {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.4;
+    }
+    #detail-panel-content .step-duration-inline {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-left: 0.25rem;
+    }
+    #detail-panel-content .step-sub-instruction {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+
+    /* Montée et Descente */
+    #detail-panel-content .step-stop-point {
+        margin-top: 0.75rem;
+        padding-left: 0;
+        position: relative;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    #detail-panel-content .step-stop-point::before {
+        /* On n'utilise plus la puce, on a la ligne verticale */
+        display: none;
+    }
+    #detail-panel-content .step-stop-point .step-time-detail {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-left: 0.5rem;
+        font-weight: 500;
+    }
+    
+    /* Arrêts intermédiaires */
+    #detail-panel-content .intermediate-stops {
+        margin: 0.75rem 0 0.75rem 0;
+        padding-left: 0;
+    }
+    #detail-panel-content .intermediate-stops summary {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--primary);
+        padding: 0.25rem 0;
+    }
+    #detail-panel-content .intermediate-stops-list {
+        margin: 0.5rem 0 0 0;
+        padding-left: 0.5rem;
+        list-style-type: none;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        border-left: 4px solid var(--line-color, var(--border));
+    }
+    #detail-panel-content .intermediate-stops-list li {
+        position: relative;
+        padding: 0.3rem 0 0.3rem 0.75rem;
+    }
+    #detail-panel-content .intermediate-stops-list li::before {
+        content: '';
+        position: absolute;
+        left: -0.7rem;
+        top: 0.65em;
+        width: 8px;
+        height: 2px;
+        background: var(--line-color, var(--border));
+    }
+    
+    /* NOUVEAU V46: Styles pour les étapes de marche détaillées */
+    #detail-panel-content .intermediate-stops-list.walk-steps {
+        border-left-color: transparent;
+        padding-left: 0;
+        margin-top: 0.75rem;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps li {
+        padding-left: 0;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        padding-bottom: 0.5rem;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps li::before {
+        display: none;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--text-secondary);
+        margin-top: 0.2em;
+    }
+    #detail-panel-content .intermediate-stops-list .walk-step-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.5;
+    }
+    #detail-panel-content .intermediate-stops-list .walk-step-meta {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        font-weight: 400;
+    }
+/* =========================================
+ * ANIMATIONS & MOBILE OPTIMIZATIONS
+ * ========================================= */
+
+/* 1. L'Animation d'entrée (Le site "glisse" vers le haut) */
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-section, 
+.main-nav-buttons-condensed, 
+.bottom-content-wrapper {
+    animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0; /* Caché au départ */
+}
+.main-nav-buttons-condensed { animation-delay: 0.1s; }
+.bottom-content-wrapper { animation-delay: 0.2s; }
+
+
+/* 2. RESTRUCTURATION MOBILE (Le plus important) */
+    
+    /* Réduire les marges du bloc principal */
+    .hero-section {
+        padding: 1.25rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* TRANSFORMER LES 3 BOUTONS EN GRILLE HORIZONTALE */
+    .main-nav-buttons-condensed {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 colonnes égales */
+        gap: 0.75rem; /* Espace réduit */
+        margin-top: 1.5rem;
+    }
+
+    .nav-button-condensed {
+        padding: 0.75rem 0.25rem;
+        flex-direction: column; /* Icône au-dessus du texte */
+        text-align: center;
+        justify-content: flex-start;
+        height: auto;
+        aspect-ratio: 1 / 1; /* Carré parfait */
+        border-radius: 16px; /* Plus arrondi (style iOS) */
+    }
+
+    .nav-button-condensed svg {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 6px; /* Espace entre icône et texte */
+    }
+
+    .nav-button-condensed span {
+        font-size: 0.7rem; /* Texte plus petit */
+        line-height: 1.1;
+    }
+
+    /* ALIGNER LES CHIFFRES CLÉS SUR UNE LIGNE */
+    .key-figures-grid {
+        display: flex;
+        flex-direction: row; /* Force la ligne */
+        justify-content: space-between; /* Espacement égal */
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+
+    .key-figure-item {
+        flex: 1;
+        margin-bottom: 0; /* Supprime la marge verticale */
+    }
+
+    .key-figure-number {
+        font-size: 1.5rem; /* Chiffres un peu plus petits pour tenir */
+    }
+
+    .key-figure-label {
+        font-size: 0.7rem;
+    }
+    
+    /* Réduire la taille du titre "Où allons-nous ?" */
+    .hero-section .planner-block .planner-title-bar h3 {
+        font-size: 1.2rem;
+    }
+
+    
+
+    /* Ajustement spécifique des badges dans le panneau détail (mobile) */
+    #detail-panel-content .step-icon .route-line-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        min-width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        box-shadow: var(--shadow-sm);
+        border: 2px solid white;
+    }
+
+} /* ⬅️ FIN du @media (max-width: 768px) */
+/* ⬅️ FIN du @media (max-width: 768px) pour itinerary-detail */
+

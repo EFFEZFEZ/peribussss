@@ -1,0 +1,50 @@
+modules = ["nodejs-20", "web", "python-3.11"]
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "web_server"
+
+[[workflows.workflow]]
+name = "web_server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 -m http.server 5000 --bind 0.0.0.0 --directory public"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 36221
+externalPort = 3003
+
+[[ports]]
+localPort = 38033
+externalPort = 3001
+
+[[ports]]
+localPort = 44675
+externalPort = 3000
+
+[[ports]]
+localPort = 44811
+externalPort = 3002
+
+[nix]
+channel = "stable-25_05"

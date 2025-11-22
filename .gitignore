@@ -1,0 +1,31 @@
+Got it. I have created the `.gitignore` file for your project with the exact rules you provided. This is a crucial step to protect your data and keep your repository clean.
+
+### `.gitignore`
+
+```
+# GTFS Data Files (user will provide their own)
+public/data/gtfs/*.txt
+public/data/map.geojson
+
+# Keep directory structure
+!public/data/gtfs/.gitkeep
+!public/data/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+```
