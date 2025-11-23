@@ -28,6 +28,8 @@
 </head>
 <body>
 
+    <!-- Preloader removed: instant load requested by user -->
+
     <header id="main-header">
     <div class="header-content">
         <div class="logo">
@@ -38,6 +40,9 @@
             </div>
         </div>
         <nav class="header-nav">
+            <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
+                <span id="theme-toggle-icon">🌙</span>
+            </button>
             </nav>
     </div>
 </header>
@@ -64,22 +69,24 @@
                             <div class="planner-form">
                                 <div class="planner-inputs">
                                     
-                                    <div class="form-group" style="position: relative;">
+                                    <div class="form-group has-geolocate">
                                         <label for="hall-planner-from">DÉPART (obligatoire)</label>
-                                        <input type="text" id="hall-planner-from" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                        <div class="input-with-action">
+                                            <input type="text" id="hall-planner-from" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                            <button class="btn-icon-round btn-geolocate" id="hall-geolocate-btn" aria-label="Utiliser ma position" disabled></button>
+                                        </div>
                                         <div id="from-suggestions" class="autocomplete-suggestions"></div>
-                                        
-                                        <button class="btn-icon-round btn-geolocate" id="hall-geolocate-btn" aria-label="Utiliser ma position" disabled>
-                                            </button>
                                     </div>
 
                                     <button class="btn-swap-direction" id="hall-btn-swap-direction" aria-label="Inverser le départ et l'arrivée">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.1l4 4-4 4"/><path d="M3 12.6v-2.6c0-1.1.9-2 2-2h16"/><path d="M7 21.9l-4-4 4-4"/><path d="M21 11.4v2.6c0 1.1-.9 2-2 2H3"/></svg>
                                     </button>
 
-                                    <div class="form-group" style="position: relative;">
+                                    <div class="form-group">
                                         <label for="hall-planner-to">ARRIVÉE (obligatoire)</label>
-                                        <input type="text" id="hall-planner-to" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                        <div class="input-with-action">
+                                            <input type="text" id="hall-planner-to" placeholder="Gare, station, arrêt ou lieu" autocomplete="off">
+                                        </div>
                                         <div id="to-suggestions" class="autocomplete-suggestions"></div>
                                     </div>
 

@@ -26,6 +26,79 @@
  * 5. Ajout de `panToUserLocation()` pour centrer la carte.
  */
 
+const LIGHT_TILE_CONFIG = Object.freeze({
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }
+});
+
+const DARK_TILE_CONFIG = Object.freeze({
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    options: {
+        attribution: '© OpenStreetMap contributors, © CARTO',
+        maxZoom: 19,
+        subdomains: 'abcd'
+    }
+});
+
+const LOCATE_CONTROL_SCRIPT = 'https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.js';
+const LOCATE_CONTROL_STYLES = 'https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.css';
+let locateControlLoaderPromise = null;
+
+function ensureLocateControlStyles() {
+    if (typeof document === 'undefined') {
+        return;
+    }
+    const existing = document.querySelector('link[data-locate-control="true"]');
+    if (existing) {
+        return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LOCATE_CONTROL_STYLES;
+    link.setAttribute('data-locate-control', 'true');
+    document.head.appendChild(link);
+}
+
+function ensureLocateControlAssets() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return Promise.resolve();
+    }
+    if (window.L?.control?.locate) {
+        return Promise.resolve();
+    }
+
+    ensureLocateControlStyles();
+
+    if (locateControlLoaderPromise) {
+        return locateControlLoaderPromise;
+    }
+
+    locateControlLoaderPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = LOCATE_CONTROL_SCRIPT;
+        script.async = true;
+        script.onload = () => {
+            if (window.L?.control?.locate) {
+                resolve();
+            } else {
+                reject(new Error('Leaflet LocateControl chargé sans exposer L.control.locate'));
+            }
+        };
+        script.onerror = () => {
+            reject(new Error('Impossible de charger Leaflet LocateControl'));
+        };
+        document.head.appendChild(script);
+    }).catch(error => {
+        locateControlLoaderPromise = null;
+        throw error;
+    });
+
+    return locateControlLoaderPromise;
+}
+
 export class MapRenderer {
     /**
      * @param {string} mapElementId - L'ID de l'élément HTML de la carte
@@ -58,6 +131,10 @@ export class MapRenderer {
         this.userLocationMarker = null; // Le "point bleu"
         this.locateControl = null; // Le contrôle Leaflet.Locate
 
+        this.activeTileLayer = null;
+        this.currentTheme = null;
+        this.isDarkTheme = false;
+
         /* Initialisation du groupe de clusters */
         this.clusterGroup = L.markerClusterGroup({
             spiderfyOnMaxZoom: true,
@@ -74,11 +151,9 @@ export class MapRenderer {
         this.map = L.map(this.mapElementId, {
             zoomControl: false // ✅ V57: On désactive le zoom par défaut pour le repositionner
         }).setView(this.centerCoordinates, this.zoomLevel);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(this.map);
+
+        const prefersDark = typeof document !== 'undefined' && document.body?.classList?.contains('dark-theme');
+        this.applyTheme(prefersDark);
         
         // ✅ V57: Ajout du contrôle de zoom en haut à droite
         L.control.zoom({ position: 'topright' }).addTo(this.map);
@@ -110,6 +185,75 @@ export class MapRenderer {
         // Quand le popup est fermé, on désélectionne le bus
         this.busPopup.on('remove', () => {
             this.selectedBusId = null;
+        });
+    }
+
+    applyTheme(useDarkTheme) {
+        if (!this.map) return;
+        const desiredTheme = useDarkTheme ? 'dark' : 'light';
+        const themeChanged = this.currentTheme !== desiredTheme;
+
+        if (this.activeTileLayer) {
+            this.map.removeLayer(this.activeTileLayer);
+            this.activeTileLayer = null;
+        }
+
+        const config = useDarkTheme ? DARK_TILE_CONFIG : LIGHT_TILE_CONFIG;
+        this.activeTileLayer = L.tileLayer(config.url, config.options).addTo(this.map);
+        this.currentTheme = desiredTheme;
+        this.isDarkTheme = useDarkTheme;
+
+        if (themeChanged) {
+            this.restyleRouteLayers();
+        }
+    }
+
+    getRouteStyle(baseColor) {
+        return {
+            color: this.getRouteColorForTheme(baseColor),
+            weight: this.isDarkTheme ? 3.5 : 4,
+            opacity: this.isDarkTheme ? 0.72 : 0.85,
+            lineCap: 'round',
+            lineJoin: 'round'
+        };
+    }
+
+    getRouteColorForTheme(color) {
+        const hex = this.normalizeHexColor(color);
+        if (!hex) return '#3388ff';
+        if (!this.isDarkTheme) return hex;
+        return this.lightenColor(hex, 0.2);
+    }
+
+    normalizeHexColor(color) {
+        if (!color) return null;
+        const cleaned = color.startsWith('#') ? color : `#${color}`;
+        if (/^#([0-9a-fA-F]{6})$/.test(cleaned)) {
+            return cleaned.toUpperCase();
+        }
+        return null;
+    }
+
+    lightenColor(hex, amount = 0.15) {
+        const clean = hex.replace('#', '');
+        if (clean.length !== 6) return hex;
+        const num = parseInt(clean, 16);
+        const r = (num >> 16) & 0xff;
+        const g = (num >> 8) & 0xff;
+        const b = num & 0xff;
+        const newR = Math.round(r + (255 - r) * amount);
+        const newG = Math.round(g + (255 - g) * amount);
+        const newB = Math.round(b + (255 - b) * amount);
+        return `#${(newR << 16 | newG << 8 | newB).toString(16).padStart(6, '0')}`;
+    }
+
+    restyleRouteLayers() {
+        if (!this.routeLayersById) return;
+        Object.values(this.routeLayersById).forEach(layers => {
+            layers.forEach(layer => {
+                if (!layer || !layer.__baseColor) return;
+                layer.setStyle(this.getRouteStyle(layer.__baseColor));
+            });
         });
     }
 
@@ -184,17 +328,14 @@ export class MapRenderer {
             const offsetMeters = 3;
             if (numRoutes === 1) {
                 const feature = features[0];
-                const routeColor = feature.properties?.route_color || '#3388ff';
                 const routeId = feature.properties?.route_id;
+                const route = routeId ? dataManager.getRoute(routeId) : null;
+                const rawColor = route?.route_color || feature.properties?.route_color;
+                const baseColor = this.normalizeHexColor(rawColor) || '#3388FF';
                 const layer = L.geoJSON(feature, {
-                    style: {
-                        color: routeColor,
-                        weight: baseWidth,
-                        opacity: 0.85,
-                        lineCap: 'round',
-                        lineJoin: 'round'
-                    }
+                    style: this.getRouteStyle(baseColor)
                 });
+                layer.__baseColor = baseColor;
                 if (routeId) {
                     if (!this.routeLayersById[routeId]) this.routeLayersById[routeId] = [];
                     this.routeLayersById[routeId].push(layer);
@@ -203,8 +344,10 @@ export class MapRenderer {
                 layer.addTo(this.routeLayer);
             } else {
                 features.forEach((feature, index) => {
-                    const routeColor = feature.properties?.route_color || '#3388ff';
                     const routeId = feature.properties?.route_id;
+                    const route = routeId ? dataManager.getRoute(routeId) : null;
+                    const rawColor = route?.route_color || feature.properties?.route_color;
+                    const baseColor = this.normalizeHexColor(rawColor) || '#3388FF';
                     const offsetCoords = this.offsetLineString(
                         feature.geometry.coordinates,
                         offsetMeters,
@@ -220,14 +363,9 @@ export class MapRenderer {
                         properties: feature.properties
                     };
                     const layer = L.geoJSON(offsetFeature, {
-                        style: {
-                            color: routeColor,
-                            weight: baseWidth,
-                            opacity: 0.85,
-                            lineCap: 'round',
-                            lineJoin: 'round'
-                        }
+                        style: this.getRouteStyle(baseColor)
                     });
+                    layer.__baseColor = baseColor;
                     if (routeId) {
                         if (!this.routeLayersById[routeId]) this.routeLayersById[routeId] = [];
                         this.routeLayersById[routeId].push(layer);
@@ -480,7 +618,12 @@ export class MapRenderer {
         const weight = state ? 6 : 4; 
         const opacity = state ? 1 : 0.85;
         this.routeLayersById[routeId].forEach(layer => {
-            layer.setStyle({ weight: weight, opacity: opacity });
+            const baseColor = layer.__baseColor || '#3388FF';
+            layer.setStyle({
+                color: this.getRouteColorForTheme(baseColor),
+                weight: weight,
+                opacity: opacity
+            });
             if (state) {
                 layer.bringToFront(); 
             }
@@ -633,56 +776,71 @@ export class MapRenderer {
      * @param {function} onError - Callback d'erreur (appelé par main.js)
      */
     addLocateControl(onSuccess, onError) {
-        if (!this.map || !L.control.locate) {
-            console.warn("Leaflet.locate n'est pas chargé. Impossible d'ajouter le contrôle.");
+        if (!this.map) {
+            console.warn('Carte non initialisée, impossible d’ajouter le contrôle de localisation.');
             return;
         }
-        
-        this.locateControl = L.control.locate({
-            position: 'topright',
-            strings: {
-                title: "Me localiser"
-            },
-            flyTo: true,
-            keepCurrentZoomLevel: true,
-            markerClass: L.Marker, // Utilise un marqueur standard (qu'on va cacher)
-            markerStyle: {
-                opacity: 0, // Cache le marqueur par défaut
-                interactive: false
-            },
-            circleStyle: {
-                opacity: 0, // Cache le cercle de précision
-                fillOpacity: 0
-            },
-            locateOptions: {
-                enableHighAccuracy: true
-            },
-            // Utilise notre SVG personnalisé pour le bouton
-            // (Note: La bibliothèque utilise <a>, donc on met le SVG dedans)
-            createButtonCallback: (container, options) => {
-                const link = L.DomUtil.create('a', 'leaflet-bar-part leaflet-bar-part-single leaflet-control-locate', container);
-                link.href = '#';
-                link.title = options.strings.title;
-                link.setAttribute('role', 'button');
-                link.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`;
-                return link;
+
+        const mountControl = () => {
+            if (!L.control?.locate) {
+                console.warn("Leaflet.locate reste indisponible après chargement.");
+                return;
             }
-        }).addTo(this.map);
+            if (this.locateControl) {
+                return;
+            }
 
-        // Lier les événements du contrôle aux callbacks de main.js
-        this.map.on('locationfound', (e) => {
-            this.locateControl.stop(); // Arrête l'animation
-            
-            // On appelle la fonction de succès de main.js
-            onSuccess({ coords: { latitude: e.latitude, longitude: e.longitude } });
-            
-            // Centre la carte sur la nouvelle position
-            this.panToUserLocation();
-        });
+            this.locateControl = L.control.locate({
+                position: 'topright',
+                strings: {
+                    title: "Me localiser"
+                },
+                flyTo: true,
+                keepCurrentZoomLevel: true,
+                markerClass: L.Marker,
+                markerStyle: {
+                    opacity: 0,
+                    interactive: false
+                },
+                circleStyle: {
+                    opacity: 0,
+                    fillOpacity: 0
+                },
+                locateOptions: {
+                    enableHighAccuracy: true
+                },
+                createButtonCallback: (container, options) => {
+                    const link = L.DomUtil.create('a', 'leaflet-bar-part leaflet-bar-part-single leaflet-control-locate', container);
+                    link.href = '#';
+                    link.title = options.strings.title;
+                    link.setAttribute('role', 'button');
+                    link.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`;
+                    return link;
+                }
+            }).addTo(this.map);
 
-        this.map.on('locationerror', (e) => {
-            onError(e); // Appelle la fonction d'erreur de main.js
-        });
+            this.map.on('locationfound', (e) => {
+                this.locateControl.stop();
+                onSuccess({ coords: { latitude: e.latitude, longitude: e.longitude } });
+                this.panToUserLocation();
+            });
+
+            this.map.on('locationerror', (e) => {
+                onError(e);
+            });
+        };
+
+        if (L.control?.locate) {
+            mountControl();
+            return;
+        }
+
+        console.warn("Leaflet.locate non détecté, chargement dynamique en cours...");
+        ensureLocateControlAssets()
+            .then(mountControl)
+            .catch(error => {
+                console.error('Impossible de charger Leaflet LocateControl:', error);
+            });
     }
 
     /**

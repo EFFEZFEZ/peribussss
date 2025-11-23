@@ -35,6 +35,142 @@
     --radius-full: 9999px;
 }
 
+/* Dark theme variables - applied by toggling `body.dark-theme` */
+body.dark-theme {
+    --bg-main: #0b1220;
+    --bg-secondary: #0f1724;
+    --bg-light: #071223;
+    --text-primary: #e6eef8;
+    --text-secondary: #9fb3c9;
+    --border: rgba(255,255,255,0.06);
+    --primary: #4aa3ff;
+    --primary-dark: #2b8fe6;
+    --color-tab-active: #43b0ff;
+    --color-nav-condensed-bg: rgba(10,50,90,0.9);
+}
+
+/* Small visual adjustments in dark mode */
+body.dark-theme #main-header {
+    background: rgba(6,10,14,0.7);
+    border-bottom-color: rgba(255,255,255,0.04);
+}
+body.dark-theme .hero-section {
+    background-image:
+        linear-gradient(rgba(2,6,12,0.6), rgba(2,6,12,0.6)),
+        url('https://www.vie-economique.com/wp-content/uploads/sites/13/2024/12/shutterstock_2365894285-scaled.jpg');
+}
+body.dark-theme .planner-block, body.dark-theme .card, body.dark-theme .instruction-content, body.dark-theme .leaflet-popup-content-wrapper {
+    background: rgba(8,12,18,0.6);
+    border-color: rgba(255,255,255,0.04);
+}
+body.dark-theme .btn, body.dark-theme .btn-icon-round {
+    background: rgba(255,255,255,0.02);
+    color: var(--text-primary);
+    border-color: rgba(255,255,255,0.04);
+}
+body.dark-theme .nav-button-condensed {
+    color: white;
+}
+body.dark-theme #map { background: #06131b; }
+body.dark-theme #results-map,
+body.dark-theme #detail-map {
+    background: #050c15;
+}
+body.dark-theme #top-bar {
+    background: rgba(6, 12, 20, 0.88);
+    border-bottom-color: rgba(255,255,255,0.06);
+    color: var(--text-primary);
+}
+body.dark-theme #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map,
+body.dark-theme #map-container #map-view #top-bar > #clock,
+body.dark-theme #map-container #map-view #top-bar > #status-info,
+body.dark-theme #map-container #map-view #top-bar > #btn-toggle-filter {
+    background: rgba(6, 12, 20, 0.92);
+    border-color: rgba(255,255,255,0.08);
+    color: var(--text-primary);
+}
+body.dark-theme #route-filter-panel {
+    background: rgba(4, 10, 18, 0.95);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 30px rgba(0,0,0,0.65);
+}
+body.dark-theme #detail-map-summary {
+    background: rgba(6, 12, 20, 0.9);
+    color: var(--text-primary);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+}
+body.dark-theme #detail-map-header #btn-back-to-results {
+    background: rgba(8, 12, 18, 0.95);
+    color: var(--text-primary);
+}
+body.dark-theme input[type="text"],
+body.dark-theme input[type="search"],
+body.dark-theme .real-select,
+body.dark-theme textarea {
+    color: #f5f7fb;
+    background-color: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+}
+body.dark-theme input[type="text"]::placeholder,
+body.dark-theme input[type="search"]::placeholder,
+body.dark-theme textarea::placeholder {
+    color: rgba(245,247,251,0.6);
+}
+/* Adjust leaflet locate control in dark */
+body.dark-theme .leaflet-control-locate { background-color: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.04); }
+
+/* Smooth theme transition for colors/backgrounds */
+body, .card, .planner-block, #main-header, #map, .btn, .btn-icon-round {
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+/* Ensure buttons remain interactive in dark-mode and have clear contrast */
+.btn, .btn-icon-round {
+    pointer-events: auto;
+}
+.btn-icon-round {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Leaflet controls: keep them visible & clickable in dark mode */
+.leaflet-control a, .leaflet-control button, .leaflet-bar a, .leaflet-bar button {
+    color: var(--text-primary) !important;
+    background: rgba(255,255,255,0.02) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+}
+.leaflet-control a:hover, .leaflet-control button:hover, .leaflet-bar a:hover, .leaflet-bar button:hover {
+    background: rgba(255,255,255,0.04) !important;
+}
+
+/* Ensure the map container is not covered by header or other elements */
+#map { z-index: 1; }
+
+/* Dark-theme specific tweaks for Leaflet when map container has .dark-theme */
+#map.dark-theme .leaflet-control a,
+#map.dark-theme .leaflet-control button,
+#map.dark-theme .leaflet-bar a,
+#map.dark-theme .leaflet-bar button,
+#detail-map.dark-theme .leaflet-control a,
+#detail-map.dark-theme .leaflet-control button,
+#detail-map.dark-theme .leaflet-bar a,
+#detail-map.dark-theme .leaflet-bar button,
+#results-map.dark-theme .leaflet-control a,
+#results-map.dark-theme .leaflet-control button,
+#results-map.dark-theme .leaflet-bar a,
+#results-map.dark-theme .leaflet-bar button {
+    color: var(--text-primary) !important;
+    background: rgba(8,12,18,0.6) !important;
+    border-color: rgba(255,255,255,0.06) !important;
+}
+
+#map.dark-theme .leaflet-control-locate svg,
+#detail-map.dark-theme .leaflet-control-locate svg,
+#results-map.dark-theme .leaflet-control-locate svg {
+    color: var(--text-primary) !important;
+}
+
 /* =========================================
  * NOUVELLE STRUCTURE DE BASE
  * ========================================= */
@@ -228,6 +364,10 @@ body.view-is-locked #main-header {
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    /* Défensif : assurer que tout le planificateur (bouton, popover)
+       crée un contexte d'empilement au-dessus du contenu bas de page */
+    position: relative;
+    z-index: 200;
 }
 
 .hero-section .planner-block .planner-title-bar h3 {
@@ -258,10 +398,11 @@ body.view-is-locked #main-header {
 .planner-inputs {
     display: flex;
     flex: 1;
-    gap: 0.5rem; 
-    align-items: stretch;
+    gap: 0.75rem; 
+    align-items: center;
     padding-left: 0; /* ensure alignment with planner block padding */
     padding-right: 0;
+    position: relative;
 }
 .planner-inputs .form-group {
     flex: 1;
@@ -274,6 +415,8 @@ body.view-is-locked #main-header {
     font-weight: 600;
     border-radius: var(--radius-md);
     flex-shrink: 0;
+    position: relative; /* Garder le bouton au-dessus des cartes */
+    z-index: 100; /* Popover (1000) > Search (100) > Bottom content (1) */
 }
 
 .main-nav-buttons-condensed {
@@ -286,6 +429,12 @@ body.view-is-locked #main-header {
     margin-right: auto;
     position: relative; 
     z-index: 1; /* Inférieur au planificateur */
+}
+
+/* Forcer les blocs bas (ex: cartes 'Notre réseau en chiffres') sous le planificateur */
+.bottom-content-wrapper {
+    position: relative;
+    z-index: 1; /* Doit rester en dessous du bouton Rechercher (100) et du popover (1000) */
 }
 
 .nav-button-condensed {
@@ -464,6 +613,15 @@ body.view-is-locked #main-header {
     color: var(--text-secondary);
 }
 
+/* Force back button to be on top and clickable on desktop */
+#btn-back-to-hall,
+#btn-back-to-dashboard-from-map,
+#btn-back-to-dashboard-from-results {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 3000 !important;
+}
+
 .content-cards {
     display: grid;
     grid-template-columns: 1fr;
@@ -504,12 +662,17 @@ body.view-is-locked #main-header {
 
 .form-group {
     margin-bottom: 1rem;
+    position: relative;
 }
 .form-group label {
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
+}
+.input-with-action {
+    position: relative;
+    width: 100%;
 }
 .form-group input[type="text"] {
     width: 100%;
@@ -521,9 +684,9 @@ body.view-is-locked #main-header {
     font-family: inherit;
     transition: all 0.15s ease;
     background: var(--bg-main); 
-    
-    /* ✅ V57: Padding à droite pour le bouton géoloc */
-    padding-right: 50px;
+}
+.form-group.has-geolocate input[type="text"] {
+    padding-right: 3.25rem;
 }
 .form-group input[type="text"]:focus {
     border-color: var(--primary);
@@ -1338,6 +1501,30 @@ details[open] .accordion-content {
 #close-instructions:hover { background: var(--primary-dark); }
 
 /* =========================================
+ * CORRECTION D'EMPILEMENT GLOBAL (Empêche le menu d'être coupé)
+ * ========================================= */
+
+/* On force la section du haut (Hero) à être AU-DESSUS de la section du bas */
+.hero-section {
+    position: relative;
+    z-index: 20; /* Plus haut que le contenu en dessous */
+}
+
+/* On force la section du bas à être EN-DESSOUS */
+.bottom-content-wrapper {
+    position: relative;
+    z-index: 10; 
+}
+
+/* On s'assure que rien ne coupe le contenu qui dépasse */
+.hero-section, 
+.planner-block-wrapper, 
+.planner-block, 
+.planner-form {
+    overflow: visible !important;
+}
+
+/* =========================================
  * STYLES LEAFLET
  * ========================================= */
 
@@ -1616,22 +1803,23 @@ details[open] .accordion-content {
 
 .btn-geolocate {
     position: absolute;
-    top: 50%; /* Centre verticalement par rapport au champ */
+    top: 50%;
     transform: translateY(-50%);
-    right: 8px;
-    width: 36px;
-    height: 36px;
-    color: var(--text-secondary);
-    background: transparent;
-    border: none;
+    right: 0.65rem;
+    width: 40px;
+    height: 40px;
+    color: var(--primary);
+    box-shadow: var(--shadow-sm);
+    z-index: 5;
 }
 .btn-geolocate:hover {
     background: var(--bg-secondary);
-    color: var(--primary);
+    color: var(--primary-dark);
 }
 .btn-geolocate:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* ✅ V57: NOUVEAU - Spinner pour le bouton géoloc */
@@ -1660,7 +1848,11 @@ details[open] .accordion-content {
     cursor: pointer;
     color: var(--primary);
     flex-shrink: 0;
-    margin-bottom: 0.125rem; 
+    margin: 0 0.5rem;
+    align-self: center;
+    position: relative;
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
 }
 .btn-swap-direction:hover {
@@ -1668,11 +1860,20 @@ details[open] .accordion-content {
     transform: rotate(180deg);
 }
 
+/* =========================================
+ * CORRECTIF Z-INDEX (PLACEZ CECI AVANT .btn-when)
+ * ========================================= */
+
 .form-group-when {
     position: relative; 
     flex-shrink: 0;
     margin-bottom: 0; 
+    /* C'est ICI la correction magique : on force ce bloc à être au-dessus 
+       du bouton "Rechercher" qui le suit dans le HTML */
+    z-index: 50; 
 }
+
+/* ... Le reste de vos styles (.btn-when, etc.) ... */
 .btn-when {
     display: flex;
     align-items: center;
@@ -1796,7 +1997,8 @@ details[open] .accordion-content {
     font-size: 0.9rem;
     font-family: inherit;
     transition: all 0.15s ease;
-    background: var(--bg-main); 
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
     appearance: none;
     -webkit-appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
@@ -1805,6 +2007,14 @@ details[open] .accordion-content {
     background-size: 12px;
     cursor: pointer;
     padding-right: 2.5rem;
+}
+.real-select option {
+    color: var(--text-primary);
+    background-color: var(--bg-main);
+}
+body.dark-theme .real-select option {
+    background-color: #0f1724;
+    color: var(--text-primary);
 }
 .real-select:focus {
     border-color: var(--primary);
@@ -1855,24 +2065,69 @@ details[open] .accordion-content {
 
 
 @media (max-width: 900px) { 
+    /* 1. On nettoie le layout du formulaire */
     .planner-form {
         flex-direction: column;
         align-items: stretch;
+        /* Isolation pour éviter les mélanges bizarres */
+        isolation: isolate; 
     }
     .planner-inputs {
         flex-direction: column;
         gap: 1rem; 
     }
-    .btn-swap-direction {
-        display: none; 
+    .btn-swap-direction { display: none; }
+    .btn-when { width: 100%; }
+
+    /* 2. LE PARENT DU MENU (L'Ancre) */
+    .form-group-when {
+        position: relative; 
+        margin-bottom: 0;
+        /* CRUCIAL : Il doit être devant le bouton Rechercher */
+        z-index: 500; 
     }
-    .btn-when {
-        width: 100%; 
-    }
+
+    /* 3. LE MENU LUI-MÊME */
     #planner-options-popover {
+        /* Position absolue par rapport à .form-group-when */
+        position: absolute !important; 
+        top: calc(100% + 10px); /* Juste sous le bouton */
         left: 0;
-        right: 0;
-        width: auto;
+        width: 100%;
+        
+        /* Design */
+        max-height: 350px;
+        overflow-y: auto;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3); /* Grosse ombre */
+        
+        /* CRUCIAL : Z-Index très haut pour flotter */
+        z-index: 1000;
+        
+        /* S'assurer qu'il est cliquable */
+        pointer-events: auto;
+    }
+
+    /* 4. Cacher proprement quand c'est fermé */
+    #planner-options-popover.hidden {
+        display: none !important;
+    }
+
+    /* 5. LE BOUTON RECHERCHER */
+    .planner-search-btn {
+        position: relative;
+        /* Z-Index plus bas que le menu */
+        z-index: 1; 
+        margin-top: 0;
+    }
+
+    /* 6. NETTOYAGE : Suppression totale des "écrans gris" (backdrops) */
+    #planner-options-popover::before,
+    #planner-options-popover:not(.hidden)::before {
+        display: none !important;
+        content: none !important;
     }
 }
 
@@ -2790,13 +3045,18 @@ details[open] .accordion-content {
 }
 
 .hero-section, 
-.main-nav-buttons-condensed, 
-.bottom-content-wrapper {
+.main-nav-buttons-condensed {
     animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     opacity: 0; /* Caché au départ */
 }
 .main-nav-buttons-condensed { animation-delay: 0.1s; }
-.bottom-content-wrapper { animation-delay: 0.2s; }
+
+/* .bottom-content-wrapper ne doit PAS avoir d'animation :
+   une animation crée un stacking context qui gêne l'empilement
+   avec le planificateur. On conserve son rendu sans animation. */
+.bottom-content-wrapper {
+    opacity: 1; /* visible par défaut, pas d'animation */
+}
 
 
 /* 2. RESTRUCTURATION MOBILE (Le plus important) */
@@ -2844,6 +3104,9 @@ details[open] .accordion-content {
         align-items: flex-start;
         gap: 0.5rem;
         padding: 0.5rem 0;
+        /* Défensif : s'assurer que ce bloc reste sous le popover 'Quand' */
+        position: relative;
+        z-index: 10 !important;
     }
 
     .key-figure-item {

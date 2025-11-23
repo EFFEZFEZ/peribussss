@@ -1,3 +1,5 @@
+import { cleanDataset, buildGtfsIndexes } from './utils/gtfsProcessor.js';
+
 /**
  * dataManager.js - CORRECTION V39
  * 1. Ajout de routesById/stopsById dans le constructeur (Fix Bug Fatal)
@@ -5,6 +7,12 @@
  * (matching flexible des noms)
  */
 
+const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
+const GTFS_CACHE_VERSION = '2.0.0';
+const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
+const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
+const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
+const GTFS_CACHE_STORE = 'datasets';
 export class DataManager {
     constructor() {
         this.routes = [];
@@ -32,109 +40,294 @@ export class DataManager {
         this.routesByShortName = {};
         this.stopsByName = {};
         this.tripsByRoute = {};
+
+        this.cacheKey = GTFS_CACHE_KEY;
+        this.cacheVersion = GTFS_CACHE_VERSION;
+        this.cacheTtlMs = GTFS_CACHE_TTL_MS;
+        this.cacheMetaKey = GTFS_CACHE_META_KEY;
+        this.cacheDbPromise = null;
     }
 
-    /**
-     * Nettoie les guillemets parasites des fichiers CSV
-     */
-    cleanCSVValue(value) {
-        if (typeof value !== 'string') return value;
-        return value.replace(/^["']|["']$/g, '').trim();
-    }
-
-    cleanObject(obj) {
-        const cleaned = {};
-        for (const key in obj) {
-            cleaned[key] = this.cleanCSVValue(obj[key]);
-        }
-        return cleaned;
-    }
-
-    async loadAllData() {
+    async loadAllData(onProgress) {
         try {
-            console.log('📦 Chargement des données GTFS et GeoJSON...');
-            
-            const [routes, trips, stopTimes, stops, calendar, calendarDates, geoJson] = await Promise.all([
-                this.loadGTFSFile('routes.txt'),
-                this.loadGTFSFile('trips.txt'),
-                this.loadGTFSFile('stop_times.txt'),
-                this.loadGTFSFile('stops.txt'),
-                this.loadGTFSFile('calendar.txt'), 
-                this.loadGTFSFile('calendar_dates.txt'), 
-                this.loadGeoJSON()
-            ]);
-
-            // Nettoyer les guillemets
-            this.routes = routes.map(r => this.cleanObject(r));
-            this.trips = trips.map(t => this.cleanObject(t));
-            this.stopTimes = stopTimes.map(st => this.cleanObject(st));
-            this.stops = stops.map(s => this.cleanObject(s));
-            this.calendar = calendar.map(c => this.cleanObject(c));
-            this.calendarDates = calendarDates.map(cd => this.cleanObject(cd));
-            this.geoJson = geoJson;
-
-            console.log('🛠️  Pré-traitement des données...');
-
-            // Indexer les routes
-            this.routes.forEach(route => {
-                this.routesById[route.route_id] = route;
-                this.routesByShortName[route.route_short_name] = route;
-            });
-
-            // Indexer les arrêts
-            this.stops.forEach(stop => {
-                this.stopsById[stop.stop_id] = stop;
-                // Indexer par nom (normalisé)
-                const normalizedName = stop.stop_name.toLowerCase();
-                if (!this.stopsByName[normalizedName]) {
-                    this.stopsByName[normalizedName] = [];
-                }
-                this.stopsByName[normalizedName].push(stop);
-            });
-
-
-            // Regrouper les stop_times par trip_id
-            this.stopTimes.forEach(st => {
-                if (!this.stopTimesByTrip[st.trip_id]) {
-                    this.stopTimesByTrip[st.trip_id] = [];
-                }
-                this.stopTimesByTrip[st.trip_id].push(st);
-            });
-            
-            // Trier les stop_times par sequence
-            for (const tripId in this.stopTimesByTrip) {
-                this.stopTimesByTrip[tripId].sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
+            const cached = await this.restoreCache();
+            if (cached) {
+                console.log('⚡ GTFS cache utilisé, données prêtes instantanément.');
+                this.applyLoadedData(cached);
+                this.isLoaded = true;
+                return true;
             }
 
-            // Indexer les trips
-            this.trips.forEach(trip => {
-                this.tripsByTripId[trip.trip_id] = trip;
-                // Indexer les trips par route
-                if (!this.tripsByRoute[trip.route_id]) {
-                    this.tripsByRoute[trip.route_id] = [];
+            if (typeof Worker !== 'undefined') {
+                try {
+                    const workerPayload = await this.loadViaWorker(onProgress);
+                    this.applyLoadedData(workerPayload);
+                    await this.saveCache(workerPayload);
+                    this.isLoaded = true;
+                    return true;
+                } catch (workerError) {
+                    console.warn('GTFS worker indisponible, fallback inline.', workerError);
                 }
-                this.tripsByRoute[trip.route_id].push(trip);
-            });
-            
-            this.groupNearbyStops();
-            this.preprocessStopTimesByStop();
+            }
 
-            console.log('✅ Données chargées:');
-            console.log(`  - ${this.routes.length} routes`);
-            console.log(`  - ${this.trips.length} trips`);
-            console.log(`  - ${this.stopTimes.length} stop_times`);
-            console.log(`  - ${this.stops.length} stops`);
-            console.log(`  - ${this.calendar.length} calendriers`);
-            console.log(`  - ${this.calendarDates.length} exceptions`);
-
+            const freshPayload = await this.loadInline(onProgress);
+            this.applyLoadedData(freshPayload);
+            await this.saveCache(freshPayload);
             this.isLoaded = true;
-
         } catch (error) {
             console.error('❌ Erreur fatale:', error);
             this.showError('Erreur de chargement', 'Vérifiez les fichiers GTFS dans /public/data/gtfs/');
             this.isLoaded = false;
         }
         return this.isLoaded;
+    }
+
+    async loadViaWorker(onProgress) {
+        return new Promise((resolve, reject) => {
+            const workerUrl = new URL('./workers/gtfsWorker.js', import.meta.url);
+            const worker = new Worker(workerUrl, { type: 'module' });
+
+            worker.onmessage = (event) => {
+                const { type, payload, message, error } = event.data || {};
+                if (type === 'progress') {
+                    this.reportProgress(onProgress, message || 'Chargement des données GTFS...');
+                } else if (type === 'loaded') {
+                    worker.terminate();
+                    resolve(payload);
+                } else if (type === 'error') {
+                    worker.terminate();
+                    reject(new Error(error || 'GTFS worker error'));
+                }
+            };
+
+            worker.onerror = (event) => {
+                worker.terminate();
+                reject(event.error || new Error('GTFS worker crashed'));
+            };
+
+            worker.postMessage({ type: 'load' });
+        });
+    }
+
+    async loadInline(onProgress) {
+        this.reportProgress(onProgress, 'Chargement des fichiers GTFS...');
+        const [routes, trips, stopTimes, stops, calendar, calendarDates, geoJson] = await Promise.all([
+            this.loadGTFSFile('routes.txt'),
+            this.loadGTFSFile('trips.txt'),
+            this.loadGTFSFile('stop_times.txt'),
+            this.loadGTFSFile('stops.txt'),
+            this.loadGTFSFile('calendar.txt'), 
+            this.loadGTFSFile('calendar_dates.txt'), 
+            this.loadGeoJSON()
+        ]);
+
+        this.reportProgress(onProgress, 'Nettoyage des fichiers...');
+        const dataset = cleanDataset({
+            routes,
+            trips,
+            stopTimes,
+            stops,
+            calendar,
+            calendarDates,
+            geoJson
+        });
+
+        this.reportProgress(onProgress, 'Construction des index...');
+        const indexes = buildGtfsIndexes(dataset);
+        return { dataset, indexes, source: 'inline' };
+    }
+
+    reportProgress(onProgress, message) {
+        if (typeof onProgress === 'function' && message) {
+            onProgress(message);
+        }
+    }
+
+    applyLoadedData(payload) {
+        const dataset = payload?.dataset || payload || {};
+        const indexes = payload?.indexes || buildGtfsIndexes(dataset);
+
+        this.routes = dataset.routes || [];
+        this.trips = dataset.trips || [];
+        this.stopTimes = dataset.stopTimes || [];
+        this.stops = dataset.stops || [];
+        this.calendar = dataset.calendar || [];
+        this.calendarDates = dataset.calendarDates || [];
+        this.geoJson = dataset.geoJson || null;
+
+        this.applyIndexes(indexes);
+
+        console.log('🛠️  Index GTFS prêts.');
+        console.log('✅ Données chargées:');
+        console.log(`  - ${this.routes.length} routes`);
+        console.log(`  - ${this.trips.length} trips`);
+        console.log(`  - ${this.stopTimes.length} stop_times`);
+        console.log(`  - ${this.stops.length} stops`);
+        console.log(`  - ${this.calendar.length} calendriers`);
+        console.log(`  - ${this.calendarDates.length} exceptions`);
+    }
+    
+    applyIndexes(indexes = {}) {
+        this.routesById = indexes.routesById || {};
+        this.routesByShortName = indexes.routesByShortName || {};
+        this.stopsById = indexes.stopsById || {};
+        this.stopsByName = indexes.stopsByName || {};
+        this.tripsByRoute = indexes.tripsByRoute || {};
+        this.tripsByTripId = indexes.tripsByTripId || {};
+        this.stopTimesByTrip = indexes.stopTimesByTrip || {};
+        this.stopTimesByStop = indexes.stopTimesByStop || {};
+        this.groupedStopMap = indexes.groupedStopMap || {};
+        this.masterStops = indexes.masterStops || [];
+        console.log(`📍 ${this.masterStops.length} arrêts maîtres`);
+    }
+
+    async restoreCache() {
+        try {
+            const meta = this.getCacheMeta();
+            if (!meta) return null;
+            if (meta.version !== this.cacheVersion) {
+                console.info('GTFS cache version mismatch, purge.');
+                await this.clearCacheStorage();
+                return null;
+            }
+            if ((Date.now() - meta.timestamp) > this.cacheTtlMs) {
+                console.info('GTFS cache expiré, purge.');
+                await this.clearCacheStorage();
+                return null;
+            }
+            const payload = await this.readCacheFromIndexedDb();
+            if (!payload) {
+                await this.clearCacheStorage();
+                return null;
+            }
+            return payload;
+        } catch (error) {
+            console.warn('restoreCache failed', error);
+            await this.clearCacheStorage();
+            return null;
+        }
+    }
+
+    async saveCache(payload) {
+        try {
+            await this.writeCacheToIndexedDb(payload);
+            this.setCacheMeta({
+                version: this.cacheVersion,
+                timestamp: Date.now()
+            });
+            console.log('💾 GTFS mis en cache pour les prochaines sessions.');
+        } catch (error) {
+            console.warn('Impossible de mettre les données GTFS en cache (IndexedDB ?)', error);
+            await this.clearCacheStorage();
+        }
+    }
+
+    getCacheMeta() {
+        try {
+            const raw = localStorage.getItem(this.cacheMetaKey);
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            console.warn('getCacheMeta failed', error);
+            return null;
+        }
+    }
+
+    setCacheMeta(meta) {
+        try {
+            localStorage.setItem(this.cacheMetaKey, JSON.stringify(meta));
+        } catch (error) {
+            console.warn('setCacheMeta failed', error);
+        }
+    }
+
+    clearCacheMeta() {
+        try {
+            localStorage.removeItem(this.cacheMetaKey);
+        } catch (error) {
+            console.warn('clearCacheMeta failed', error);
+        }
+    }
+
+    async clearCacheStorage() {
+        await this.clearCacheFromIndexedDb();
+        this.clearCacheMeta();
+        this.clearLegacyLocalCache();
+    }
+
+    clearLegacyLocalCache() {
+        try {
+            localStorage.removeItem(this.cacheKey);
+        } catch (error) {
+            console.warn('clearLegacyLocalCache failed', error);
+        }
+    }
+
+    async ensureCacheDb() {
+        if (this.cacheDbPromise) return this.cacheDbPromise;
+        if (typeof indexedDB === 'undefined') {
+            this.cacheDbPromise = Promise.resolve(null);
+            return this.cacheDbPromise;
+        }
+        this.cacheDbPromise = new Promise((resolve, reject) => {
+            try {
+                const request = indexedDB.open(GTFS_CACHE_DB, 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(GTFS_CACHE_STORE)) {
+                        db.createObjectStore(GTFS_CACHE_STORE);
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            } catch (error) {
+                reject(error);
+            }
+        }).catch((error) => {
+            console.warn('ensureCacheDb failed', error);
+            return null;
+        });
+        return this.cacheDbPromise;
+    }
+
+    async readCacheFromIndexedDb() {
+        const db = await this.ensureCacheDb();
+        if (!db) return null;
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(GTFS_CACHE_STORE, 'readonly');
+            const store = tx.objectStore(GTFS_CACHE_STORE);
+            const request = store.get(this.cacheKey);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        }).then(entry => entry && entry.data ? entry.data : null).catch(error => {
+            console.warn('readCacheFromIndexedDb failed', error);
+            return null;
+        });
+    }
+
+    async writeCacheToIndexedDb(dataset) {
+        const db = await this.ensureCacheDb();
+        if (!db) return;
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(GTFS_CACHE_STORE, 'readwrite');
+            const store = tx.objectStore(GTFS_CACHE_STORE);
+            const request = store.put({ data: dataset }, this.cacheKey);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async clearCacheFromIndexedDb() {
+        const db = await this.ensureCacheDb();
+        if (!db) return;
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(GTFS_CACHE_STORE, 'readwrite');
+            const store = tx.objectStore(GTFS_CACHE_STORE);
+            const request = store.delete(this.cacheKey);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
+        }).catch(error => {
+            console.warn('clearCacheFromIndexedDb failed', error);
+        });
     }
 
     async loadGTFSFile(filename) {
@@ -147,6 +340,7 @@ export class DataManager {
             Papa.parse(csv, {
                 header: true,
                 skipEmptyLines: true,
+                worker: true,
                 complete: (results) => {
                     resolve(results.data);
                 }
@@ -174,50 +368,6 @@ export class DataManager {
             const defaultItems = errorElement.querySelectorAll('ol li:not(:first-child)');
             defaultItems.forEach(item => item.style.display = 'none');
         }
-    }
-
-    groupNearbyStops() {
-        this.masterStops = [];
-        this.groupedStopMap = {};
-        const childStops = new Set();
-
-        this.stops.forEach(stop => {
-            if (stop.parent_station && stop.parent_station.trim() !== '') {
-                childStops.add(stop.stop_id);
-            }
-        });
-
-        this.stops.forEach(stop => {
-            if (stop.location_type === '1') {
-                this.masterStops.push(stop);
-                if (!this.groupedStopMap[stop.stop_id]) {
-                    this.groupedStopMap[stop.stop_id] = [];
-                }
-                this.groupedStopMap[stop.stop_id].push(stop.stop_id); 
-            }
-            else if (stop.parent_station && stop.parent_station.trim() !== '') {
-                const parentId = stop.parent_station;
-                if (!this.groupedStopMap[parentId]) {
-                    this.groupedStopMap[parentId] = [];
-                }
-                this.groupedStopMap[parentId].push(stop.stop_id);
-            }
-            else if (stop.location_type !== '1' && !childStops.has(stop.stop_id) && (!stop.parent_station || stop.parent_station.trim() === '')) {
-                this.masterStops.push(stop);
-                this.groupedStopMap[stop.stop_id] = [stop.stop_id];
-            }
-        });
-
-        console.log(`📍 ${this.masterStops.length} arrêts maîtres`);
-    }
-
-    preprocessStopTimesByStop() {
-        this.stopTimes.forEach(st => {
-            if (!this.stopTimesByStop[st.stop_id]) {
-                this.stopTimesByStop[st.stop_id] = [];
-            }
-            this.stopTimesByStop[st.stop_id].push(st);
-        });
     }
 
     /**
@@ -642,6 +792,147 @@ export class DataManager {
 
         // 6. Échec de la recherche
         console.warn(`[GTFS Match] Aucun pattern de trip trouvé pour ${departureStopName} -> ${arrivalStopName}.`);
+        return null;
+    }
+
+    /**
+     * Retourne les arrêts proches d'une coordonnée (lat, lon)
+     * @param {{lat:number, lon:number}} coord
+     * @param {number} radiusMeters
+     * @param {number} limit
+     */
+    getNearestStops(coord, radiusMeters = 1000, limit = 10) {
+        if (!coord || typeof coord.lat !== 'number' || typeof coord.lon !== 'number') return [];
+        const candidates = this.stops.map(s => {
+            const dist = this.calculateDistance(coord.lat, coord.lon, parseFloat(s.stop_lat), parseFloat(s.stop_lon));
+            return { stop: s, distance: dist };
+        }).filter(x => !isNaN(x.distance) && x.distance <= radiusMeters);
+
+        candidates.sort((a, b) => a.distance - b.distance);
+        return candidates.slice(0, limit).map(c => c.stop);
+    }
+
+    /**
+     * Recherche de trips GTFS qui vont d'un des arrêts de départ à un des arrêts d'arrivée
+     * startStopIds / endStopIds: Array or Set of stop_id strings
+     * date: Date object
+     * windowStartSeconds/windowEndSeconds: optional seconds-since-midnight window to filter departures
+     */
+    getTripsBetweenStops(startStopIds, endStopIds, date, windowStartSeconds = 0, windowEndSeconds = 86400) {
+        const startSet = new Set(Array.isArray(startStopIds) ? startStopIds : Array.from(startStopIds || []));
+        const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
+        const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
+
+        const results = [];
+
+        // Iterate over all trips (could be optimized later)
+        for (const trip of this.trips) {
+            // Check service active
+            const isServiceActive = Array.from(serviceSet).some(activeServiceId => this.serviceIdsMatch(trip.service_id, activeServiceId));
+            if (!isServiceActive) continue;
+
+            const stopTimes = this.stopTimesByTrip[trip.trip_id];
+            if (!stopTimes || stopTimes.length < 2) continue;
+
+            let boardingIndex = -1;
+            let alightIndex = -1;
+
+            for (let i = 0; i < stopTimes.length; i++) {
+                const st = stopTimes[i];
+                if (boardingIndex === -1 && startSet.has(st.stop_id)) {
+                    boardingIndex = i;
+                }
+                if (alightIndex === -1 && endSet.has(st.stop_id)) {
+                    alightIndex = i;
+                }
+                if (boardingIndex !== -1 && alightIndex !== -1) break;
+            }
+
+            if (boardingIndex === -1 || alightIndex === -1) continue;
+            if (boardingIndex >= alightIndex) continue; // must be in order
+
+            const boardingST = stopTimes[boardingIndex];
+            const alightST = stopTimes[alightIndex];
+
+            const depSec = this.timeToSeconds(boardingST.departure_time || boardingST.arrival_time);
+            const arrSec = this.timeToSeconds(alightST.arrival_time || alightST.departure_time);
+
+            if (depSec < windowStartSeconds || depSec > windowEndSeconds) continue;
+
+            results.push({
+                tripId: trip.trip_id,
+                routeId: trip.route_id,
+                shapeId: trip.shape_id || null,
+                boardingStopId: boardingST.stop_id,
+                alightingStopId: alightST.stop_id,
+                departureSeconds: depSec,
+                arrivalSeconds: arrSec,
+                stopTimes: stopTimes.slice(boardingIndex, alightIndex + 1),
+                trip: trip,
+                route: this.getRoute(trip.route_id)
+            });
+        }
+
+        // Sort by departure time
+        results.sort((a, b) => a.departureSeconds - b.departureSeconds);
+        return results;
+    }
+
+    findStopsByName(searchName, limit = 10) {
+        if (!searchName || typeof searchName !== 'string') return [];
+        const normalize = (name) => {
+            if (!name) return '';
+            return name
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]/g, '')
+                .trim();
+        };
+
+        const normalizedQuery = normalize(searchName);
+        if (!normalizedQuery) return [];
+
+        const unique = new Map();
+        const pushStop = (stop) => {
+            if (!stop || unique.has(stop.stop_id)) return;
+            unique.set(stop.stop_id, stop);
+        };
+
+        const exactMatches = this.stopsByName[normalizedQuery];
+        if (exactMatches && exactMatches.length) {
+            exactMatches.forEach(pushStop);
+        }
+
+        if (unique.size < limit) {
+            for (const stop of this.stops) {
+                if (!stop || !stop.stop_name) continue;
+                if (normalize(stop.stop_name).includes(normalizedQuery)) {
+                    pushStop(stop);
+                    if (unique.size >= limit) break;
+                }
+            }
+        }
+
+        return Array.from(unique.values()).slice(0, limit);
+    }
+
+    /**
+     * Recherche une géométrie (GeoJSON geometry) pour un shape_id ou routeId
+     */
+    getShapeGeoJSON(shapeId, routeId = null) {
+        if (!this.geoJson || !this.geoJson.features) return null;
+
+        if (shapeId) {
+            const f = this.geoJson.features.find(feat => feat.properties && (feat.properties.shape_id === shapeId || feat.properties.shapeid === shapeId));
+            if (f && f.geometry) return f.geometry;
+        }
+
+        if (routeId) {
+            const f2 = this.geoJson.features.find(feat => feat.properties && feat.properties.route_id === routeId);
+            if (f2 && f2.geometry) return f2.geometry;
+        }
+
         return null;
     }
 }

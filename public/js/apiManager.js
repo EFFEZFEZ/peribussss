@@ -52,10 +52,13 @@ export class ApiManager {
             return this.apiLoadPromise;
         }
 
-        if (window.google?.maps?.places && window.google?.maps?.Geocoder) { // ✅ V57: Vérifie aussi Geocoder
-            console.log("✅ API Google Maps déjà chargée.");
-            this.initServices();
-            return Promise.resolve();
+        if (window.google?.maps) {
+            await this.ensureGoogleLibraries();
+            if (window.google.maps.places && window.google.maps.Geocoder) {
+                console.log("✅ API Google Maps déjà chargée.");
+                this.initServices();
+                return Promise.resolve();
+            }
         }
 
         // <-- CORRECTION: Stocke la promesse pour la réutiliser
@@ -63,27 +66,34 @@ export class ApiManager {
             const script = document.createElement('script');
             
             // ✅ V57: Charge 'places' (pour Autocomplete) et 'geocoding' (pour Reverse Geocode)
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,geocoding&loading=async`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,geocoding&v=weekly`;
             
             script.async = true;
             script.defer = true;
             
             script.onload = () => {
                 console.log("✅ API Google Maps chargée avec succès.");
-                setTimeout(() => {
-                    // ✅ V57: Vérifie les deux bibliothèques
-                    if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
-                        this.initServices();
-                        resolve();
-                    } else {
+                setTimeout(async () => {
+                    try {
+                        await this.ensureGoogleLibraries();
+                        // ✅ V57: Vérifie les deux bibliothèques
+                        if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
+                            this.initServices();
+                            resolve();
+                        } else {
+                            throw new Error("Bibliothèques places/geocoding non disponibles");
+                        }
+                    } catch (err) {
                         console.error("❌ google.maps.places ou google.maps.Geocoder n'est pas disponible");
-                        reject(new Error("Bibliothèques places/geocoding non disponibles"));
+                        this.apiLoadPromise = null;
+                        reject(err);
                     }
                 }, 100);
             };
             
             script.onerror = () => {
                 console.error("❌ Erreur lors du chargement du script Google Maps.");
+                this.apiLoadPromise = null;
                 reject(new Error("Impossible de charger Google Maps API."));
             };
             
@@ -119,6 +129,45 @@ export class ApiManager {
             
         } catch (error) {
             console.error("❌ Erreur lors de l'initialisation des services:", error);
+        }
+    }
+
+    /**
+     * S'assure que les bibliothèques Google nécessaires sont prêtes
+     */
+    async ensureGoogleLibraries() {
+        if (!window.google?.maps) {
+            return;
+        }
+
+        const importLib = window.google.maps.importLibrary;
+        if (typeof importLib !== 'function') {
+            return;
+        }
+
+        // Charger la bibliothèque Places si nécessaire
+        if (!window.google.maps.places) {
+            try {
+                const placesLib = await importLib('places');
+                if (placesLib) {
+                    window.google.maps.places = window.google.maps.places || {};
+                    Object.assign(window.google.maps.places, placesLib);
+                }
+            } catch (error) {
+                console.warn('⚠️ Impossible de charger la bibliothèque Places via importLibrary:', error);
+            }
+        }
+
+        // Charger la bibliothèque Geocoding si nécessaire
+        if (!window.google.maps.Geocoder) {
+            try {
+                const geocodingLib = await importLib('geocoding');
+                if (geocodingLib?.Geocoder && !window.google.maps.Geocoder) {
+                    window.google.maps.Geocoder = geocodingLib.Geocoder;
+                }
+            } catch (error) {
+                console.warn('⚠️ Impossible de charger la bibliothèque Geocoding via importLibrary:', error);
+            }
         }
     }
 
@@ -233,6 +282,40 @@ export class ApiManager {
                     console.warn("Échec du géocodage inversé:", status);
                     reject(new Error(`Geocode failed with status: ${status}`));
                 }
+            });
+        });
+    }
+
+    /**
+     * Récupère les coordonnées {lat,lng} pour un place_id en utilisant le Geocoder
+     * @param {string} placeId
+     * @returns {Promise<{lat:number,lng:number}|null>}
+     */
+    async getPlaceCoords(placeId) {
+        if (!this.geocoder) {
+            console.warn("⚠️ Service Geocoder non initialisé. Tentative de chargement...");
+            await this.loadGoogleMapsAPI();
+            if (!this.geocoder) {
+                console.error("❌ Impossible d'initialiser le service Geocoder");
+                return null;
+            }
+        }
+
+        return new Promise((resolve, reject) => {
+            this.geocoder.geocode({ placeId: placeId }, (results, status) => {
+                if (status === 'OK' && results && results.length > 0) {
+                    const loc = results[0].geometry && results[0].geometry.location;
+                    if (loc && typeof loc.lat === 'function' && typeof loc.lng === 'function') {
+                        resolve({ lat: loc.lat(), lng: loc.lng() });
+                        return;
+                    }
+                    if (loc && loc.lat && loc.lng) {
+                        resolve({ lat: loc.lat, lng: loc.lng });
+                        return;
+                    }
+                }
+                console.warn('getPlaceCoords: pas de résultat pour', placeId, status);
+                resolve(null);
             });
         });
     }
@@ -369,7 +452,7 @@ export class ApiManager {
         // 3️⃣ CALCULER MARCHE
         // ========================================
         try {
-            const walkData = await this.fetchWalkRoute(fromPlaceId, toPlaceId);
+            const walkData = await this.fetchWalkingRoute(fromPlaceId, toPlaceId);
             
             if (walkData?.routes?.length > 0) {
                 const route = walkData.routes[0];
@@ -564,7 +647,7 @@ export class ApiManager {
     /**
      * Calcule un itinéraire à pied
      */
-    async fetchWalkRoute(fromPlaceId, toPlaceId) {
+    async fetchWalkingRoute(fromPlaceId, toPlaceId) {
         console.log(`🚶 API Google Routes (MARCHE): ${fromPlaceId} → ${toPlaceId}`);
 
         const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
@@ -597,5 +680,10 @@ export class ApiManager {
         const data = await response.json();
         console.log("✅ Itinéraire marche calculé");
         return data;
+    }
+
+    // Compatibilité ascendante (ancienne signature)
+    async fetchWalkRoute(fromPlaceId, toPlaceId) {
+        return this.fetchWalkingRoute(fromPlaceId, toPlaceId);
     }
 }
